@@ -1,2 +1,3 @@
 django
 transitfeed
+psycopg2-binary
