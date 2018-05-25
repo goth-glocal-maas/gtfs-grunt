@@ -1,7 +1,6 @@
 import os
 import json
 
-
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -13,8 +12,8 @@ DEBUG = os.environ.get("APP_DEBUG") == "1"
 
 # # Interpreted settings. (3)
 ALLOWED_HOSTS = os.environ \
-  .get("APP_ALLOWED_HOSTS", "localhost") \
-  .split(",")
+    .get("APP_ALLOWED_HOSTS", "localhost") \
+    .split(",")
 
 # # Database JSON config. (4)
 DEFAULT_DATABASES = {
@@ -25,9 +24,9 @@ DEFAULT_DATABASES = {
 }
 
 DATABASES = (
-  json.loads(os.environ["APP_DATABASES"])
-  if "APP_DATABASES" in os.environ
-  else DEFAULT_DATABASES
+    json.loads(os.environ["APP_DATABASES"])
+    if "APP_DATABASES" in os.environ
+    else DEFAULT_DATABASES
 )
 
 # Application definition
@@ -43,7 +42,9 @@ INSTALLED_APPS = [
 
     'people',
     'gtfs',
+    'web',
 ]
+
 # production apps
 if "APP_ADDITIONAL_APPS" in os.environ:
     INSTALLED_APPS += os.environ["APP_ADDITIONAL_APPS"].split(",")
@@ -113,7 +114,38 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/1.11/howto/static-files/
 
 STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'public', 'static')
 
+# django restframework
 
-if os.path.isfile(os.path.join(BASE_DIR, 'settings_prod.py')):
-    from settings_prod import *
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+        # 'rest_framework_jwt.authentication.JSONWebTokenAuthentication',
+    ),
+    'DEFAULT_RENDERER_CLASSES': (
+        # 'rest_framework.renderers.YAMLRenderer',
+        'rest_framework.renderers.JSONRenderer',
+        # 'rest_framework.renderers.BrowsableAPIRenderer',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    ),
+    # 'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'PAGE_SIZE': 15,
+    'DEFAULT_THROTTLE_CLASSES': (
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ),
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '35/minute',
+        'user': '500/minute'
+    },
+    'DEFAULT_PARSER_CLASSES': (
+        'rest_framework.parsers.JSONParser',
+        # 'rest_framework.parsers.FormParser',
+        # 'rest_framework.parsers.MultiPartParser',
+    )
+}

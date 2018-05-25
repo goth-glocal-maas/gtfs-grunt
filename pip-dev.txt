@@ -1,3 +1,4 @@
 django
 transitfeed
 psycopg2-binary
+djangorestframework

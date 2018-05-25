@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="GTFS generator">
+  <title>GTFS Grunt</title>
+  <link rel="stylesheet" href="https://static.10ninox.com/css/bulma.min.css" />
+  <style>
+    h1.subtitle>small {
+      font-size: 0.83rem;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container" id="app">
+
+    <div class="notification" v-if="message.length > 0">
+      [[ message ]]
+    </div>
+
+    <div class="tabs is-centered">
+      <ul>
+        <li v-for="tab in tabs"
+          v-bind:class="{'is-active': active.title == tab.title, 'is-whatever': false}">
+          <a v-on:click="switchTab(tab)">[[ tab.title ]]</a>
+        </li>
+      </ul>
+    </div>
+
+    <div class="columns is-mobile">
+      <div class="column">
+        <table class="table">
+          <thead>
+            <tr>
+              <th><abbr title="Position">Pos</abbr></th>
+              <th>Team</th>
+              <th><abbr title="Played">Pld</abbr></th>
+              <th><abbr title="Won">W</abbr></th>
+              <th><abbr title="Drawn">D</abbr></th>
+              <th><abbr title="Lost">L</abbr></th>
+            </tr>
+          </thead>
+          <tfoot>
+            <tr>
+              <th><abbr title="Position">Pos</abbr></th>
+              <th>Team</th>
+              <th><abbr title="Played">Pld</abbr></th>
+              <th><abbr title="Won">W</abbr></th>
+              <th><abbr title="Drawn">D</abbr></th>
+              <th><abbr title="Lost">L</abbr></th>
+            </tr>
+          </tfoot>
+          <tbody>
+            <tr>
+              <th>1</th>
+              <td>Leicester City<strong>(C)</strong></td>
+              <td>38</td>
+              <td>23</td>
+              <td>12</td>
+              <td>3</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.5.16/dist/vue.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.1/moment.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.14/moment-timezone.mi
+n.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios@0.12.0/dist/axios.min.js"></script>
+  <script>
+    var app = new Vue({
+      delimiters: ['[[', ']]'],
+      el: '#app',
+      data: {
+        active: {},
+        tabs: [
+          {title: 'Agency', url: '/agency/'},
+          {title: 'Stop', url: '/stop/'},
+          {title: 'Route', url: '/route/'},
+          {title: 'Frequency', url: '/frequency/'},
+          {title: 'Calendar', url: '/calendar/'},
+        ],
+        url: { base: '', all: '/all' },
+        message: '',
+        groups: [],
+        devices: {},
+      },
+      mounted: function() {
+        // setInterval(() => {
+        // 	vm.getDevices()
+        // }, 1000 * 60 * 15)
+      },
+      created: function () {
+        // this.getDevices()
+      },
+      methods: {
+        switchTab: function(tab) {
+          this.active = tab
+        },
+        getAgency: function() {
+          var vm = this
+          axios.get(`${vm.url.base}${vm.url.all}`)
+            .then(function(resp) {
+                var data = resp.data
+                vm.groups = Array.from(new Set(resp.data.map((i) => i.group)))
+                vm.groups.forEach(ele => {
+                    vm.devices[ele] = data.filter((i) => {
+                        if (i.group !== ele) return
+                        i.needWater = false
+                        i.needBattery = false
+                        var sensor = i.info.sensor.toLowerCase()
+                        if (sensor === 'xiaomi mi flora' || sensor === 'mijia') {
+                            i.needBattery = i.data.battery < 10
+                        }
+                        if (sensor === 'Xiaomi Mi Flora') {
+                            i.needWater = i.data.moisture < 40 ? true : false
+                        }
+                        i.fromNow = moment.tz(i.timestamp, '').fromNow()
+                        return i
+                    })
+                })
+            })
+            .catch(function(error){
+                vm.message = 'Error! Could not reach the API. ' + error
+            })
+        }
+      }
+    })
+  </script>
+</body>
+
+</html>

@@ -13,7 +13,7 @@
 
 ### optional
 
-    agency_phone,agency_lang,agency_phone,agency_fare_url,agency_email
+    agency_phone,agency_lang,agency_fare_url,agency_email
 
 
 agency_timezone         Asia/Bangkok

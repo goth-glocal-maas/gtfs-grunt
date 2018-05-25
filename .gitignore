@@ -6,3 +6,6 @@
 
 settings_prod.py
 
+*.bz2
+
+_*

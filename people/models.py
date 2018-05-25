@@ -4,19 +4,23 @@ from django.utils.encoding import python_2_unicode_compatible
 from django.contrib.auth.models import AbstractUser
 from django.db.models import Model, CharField, SlugField, ManyToManyField
 
-# Create your models here.
-
 
 @python_2_unicode_compatible
 class User(AbstractUser):
     """User
-    
+
     I don't know why I make it people.User though, but I do it anyway,
     easier access maybe?
     """
-
     def __str__(self):
         return self.username
+
+    @property
+    def company(self):
+        try:
+            return self.company_set.all()[0]
+        except:
+            return None
 
 
 @python_2_unicode_compatible
