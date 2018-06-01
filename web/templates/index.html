@@ -25,7 +25,7 @@
       <ul>
         <li v-for="tab in tabs"
           v-bind:class="{'is-active': active.title == tab.title, 'is-whatever': false}">
-          <a v-on:click="switchTab(tab)">[[ tab.title ]]</a>
+          <a v-on:click="switchTab(tab, window)">[[ tab.title ]]</a>
         </li>
       </ul>
     </div>
@@ -82,7 +82,8 @@ n.js"></script>
           {title: 'Stop', url: '/stop/'},
           {title: 'Route', url: '/route/'},
           {title: 'Frequency', url: '/frequency/'},
-          {title: 'Calendar', url: '/calendar/'},
+          { title: 'Calendar', url: '/calendar/' },
+          { title: 'Admin', url: '/admin/', native: true },
         ],
         url: { base: '', all: '/all' },
         message: '',
@@ -98,8 +99,12 @@ n.js"></script>
         // this.getDevices()
       },
       methods: {
-        switchTab: function(tab) {
+        switchTab: function(tab, window) {
+          console.log(window)
           this.active = tab
+          if (tab.native) {
+            this.$route.replace(tab.url)
+          }
         },
         getAgency: function() {
           var vm = this

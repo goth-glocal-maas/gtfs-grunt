@@ -245,15 +245,66 @@ class StopTime(CompanyBoundModel):
 		"timepoint", "continuous_drop_off", "continuous_pickup"
 
     """
-    trip = CharField('route_id', max_length=25)
-    short_name = CharField('short name', max_length=150)
-    long_name = CharField('long name', max_length=500)
+    trip = ForeignKey('trip')
+    stop = ForeignKey('stop')
+    arrival = TimeField('Arrival time')
+    departure = TimeField('Departure time')
+    sequence = IntegerField('Stop sequence', default=0)
+    # optional
+    stop_headsign = CharField('Stop headsign', max_length=30, blank=True)
+    PICKUP_CHOICES = (
+        ('0', 'Regularly scheduled pickup'),
+        ('1', 'No pickup available'),
+        ('2', 'Must phone agency to arrange pickup'),
+        ('3', 'Must coordinate with driver to arrange pickup'),
+    )
+    pickup_type = CharField('Pickup type', max_length=1, default='0',
+                            choices=PICKUP_CHOICES)
+    DROPOFF_CHOICES = (
+        ('0', 'Regularly scheduled drop off'),
+        ('1', 'No drop off available'),
+        ('2', 'Must phone agency to arrange drop off'),
+        ('3', 'Must coordinate with driver to arrange drop off'),
+    )
+    drop_off_type = CharField('Drop off type', max_length=1, default='0',
+                              choices=DROPOFF_CHOICES)
+    shape_dist_traveled = CharField('Travel distance in km', max_length=5,
+                                    blank=True)
+    TIMEPOINT_CHOICES = (
+        ('', 'Times are considered exact.'),
+        ('0', 'Times are considered approximate.'),
+        ('1', 'Times are considered exact.'),
+    )
+    timepoint = CharField('Timepoint', max_length=1, default='',
+                          choices=TIMEPOINT_CHOICES)
 
     class Meta:
         verbose_name_plural = "Stop times"
+        ordering = ['trip', 'stop', 'sequence']
 
     def __str__(self):
         return '%s' % self.pk
+
+    @property
+    def gtfs_header(self):
+        return 'trip_id,arrival_time,departure_time,stop_id,stop_sequence,' \
+            'stop_headsign,pickup_type,drop_off_type,shape_dist_traveled,' \
+            'timepoint'
+
+    def gtfs_format(self):
+        data = [
+            ('trip_id', self.trip.trip_id),
+            ('arrival_time', self.arrival),
+            ('departure_time', self.departure),
+            ('stop_id', self.stop.stop_id),
+            ('stop_sequence', self.sequence),
+            ('stop_headsign', self.stop_headsign),
+            ('pickup_type', self.pickup_type),
+            ('drop_off_type', self.drop_off_type),
+            ('shape_dist_traveled', self.shape_dist_traveled),
+            ('timepoint', self.timepoint),
+        ]
+        return OrderedDict(data)
 
 
 @python_2_unicode_compatible
@@ -343,11 +394,67 @@ class Trip(CompanyBoundModel):
     )
     service = ForeignKey(Calendar)
     trip_id = CharField('trip_id', max_length=50)
-    short_name = CharField('short name', max_length=150)
-    long_name = CharField('long name', max_length=500)
+    # optional
+    trip_headsign = CharField('Trip headsign', max_length=30, blank=True)
+    short_name = CharField('Trip short name', max_length=150, blank=True)
+    DIRECTION_CHOICES = (
+        ('0', 'travel in one direction (e.g. outbound travel)'),
+        ('1', 'travel in the opposite direction (e.g. inbound travel)'),
+    )
+    direction_id = CharField('long name', max_length=1, default='',
+                             choices=DIRECTION_CHOICES)
+    block_id = CharField('Block ID', max_length=15, blank=True)
+
+    WHEELCHAIR_ACCESSIBLE_CHOICES = (
+        ('', 'No wheelchair accessibility'),
+        ('0', 'No wheelchair accessibility'),
+        ('1', 'indicates that the vehicle being used on this particular '
+              'trip can accommodate at least one rider in a wheelchair'),
+        ('2', 'No riders in wheelchairs can be accommodated '
+              'on this trip'),
+    )
+    wheelchair_accessible = CharField(
+        'Wheelchair accessible',
+        max_length=1,
+        default='',
+        choices=WHEELCHAIR_ACCESSIBLE_CHOICES)
+
+    BIKE_CHOICES = (
+        ('', 'indicates that there is no bike information for the trip'),
+        ('0', 'indicates that there is no bike information for the trip'),
+        ('1', 'indicates that the vehicle being used on this particular '
+              'trip can accommodate at least one bicycle'),
+        ('2', 'No bicycles are allowed on this trip'),
+    )
+    bike_allowed = CharField(
+        'Wheelchair accessible',
+        max_length=1,
+        default='',
+        choices=BIKE_CHOICES)
 
     def __str__(self):
         return self.trip_id
+
+    @property
+    def gtfs_header(self):
+        return 'route_id,service_id,trip_id,trip_headsign,trip_short_name' \
+            'direction_id,block_id,shape_id,wheelchair_accessible,bike_allowed'
+
+    def gtfs_format(self):
+        has_shape = self.route.shapes
+        data = [
+            ('route_id', self.route.route_id),
+            ('service_id', self.service.service_id),
+            ('trip_id', self.trip_id),
+            ('trip_headsign', self.trip_headsign),
+            ('trip_short_name', self.short_name),
+            ('direction_id', self.direction_id),
+            ('block_id', self.block_id),
+            ('shape_id', self.route.route_id if has_shape else ''),
+            ('wheelchair_accessible', self.wheelchair_accessible),
+            ('bike_allowed', self.bike_allowed),
+        ]
+        return OrderedDict(data)
 
 
 @python_2_unicode_compatible
@@ -485,3 +592,17 @@ class Frequency(CompanyBoundModel):
 
     def __str__(self):
         return self.pk
+
+    @property
+    def gtfs_header(self):
+        return 'trip_id,start_time,end_time,headway_secs,exact_times'
+
+    def gtfs_format(self):
+        data = [
+            ('trip_id', self.trip.trip_id),
+            ('start_time', self.start_time),
+            ('end_time', self.end_time),
+            ('headway_secs', self.headway_secs),
+            ('exact_times', self.exact_times),
+        ]
+        return OrderedDict(data)

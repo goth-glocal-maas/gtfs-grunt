@@ -3,7 +3,7 @@ from __future__ import unicode_literals
 from django.contrib.gis import admin
 from django.contrib.gis.admin import OSMGeoAdmin
 from .models import Agency, Stop, Route, Trip, Calendar, CalendarDate, \
-    FareAttribute, FareRule
+    FareAttribute, FareRule, StopTime
 
 
 def pk_nakhon_agency_action(modeladmin, request, queryset):
@@ -42,9 +42,6 @@ class RouteAdmin(OSMGeoAdmin):
     actions = [pk_nakhon_agency_action, bmta_agency_action, ]
 
 
-class TripAdmin(OSMGeoAdmin):
-    pass
-
 class CalendarAdmin(OSMGeoAdmin):
     pass
 
@@ -61,6 +58,20 @@ class FareRuleAdmin(OSMGeoAdmin):
     pass
 
 
+class TripAdmin(OSMGeoAdmin):
+    list_filter = ('route', 'service')
+    list_display = ('trip_id', 'route', 'service', 'short_name',
+                    'trip_headsign', 'direction_id')
+
+
+class StopTimeAdmin(OSMGeoAdmin):
+    list_filter = ('stop', )
+    list_display = ('trip_id', 'sequence', 'stop', 'arrival', 'departure', )
+
+    def trip_id(self, obj):
+        return obj.trip.trip_id
+
+
 admin.site.register(Agency, AgencyAdmin)
 admin.site.register(Stop, StopAdmin)
 admin.site.register(Route, RouteAdmin)
@@ -69,3 +80,4 @@ admin.site.register(Calendar, CalendarAdmin)
 admin.site.register(CalendarDate, CalendarDateAdmin)
 admin.site.register(FareAttribute, FareAttributeAdmin)
 admin.site.register(FareRule, FareRuleAdmin)
+admin.site.register(StopTime, StopTimeAdmin)
