@@ -10,7 +10,7 @@ Export route to route.txt
 
 Command:
 list          list available route for exporting
-list_agnecy   list available agencies
+list_agency   list available agencies
 export        use with --route_id to have routes.txt data
 
 Options:

@@ -387,11 +387,7 @@ class Trip(CompanyBoundModel):
     """
     route_id,service_id,trip_id,trip_headsign,block_id
     """
-    route = ForeignKey(
-        Route,
-        related_query_name='trip_route',
-        related_name='trip_route',
-    )
+    route = ForeignKey(Route)
     service = ForeignKey(Calendar)
     trip_id = CharField('trip_id', max_length=50)
     # optional
@@ -489,8 +485,7 @@ class FareAttribute(CompanyBoundModel):
                          choices=TRANSFER_CHOICES)
     # optional
     agency = ForeignKey('Agency', null=True, blank=True,
-        related_name='fare_agency'
-    )
+                        related_name='fare_agency')
     transfer_duration = CharField('Transfer duration', max_length=2)
 
     class Meta:
