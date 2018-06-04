@@ -1,7 +1,14 @@
 from __future__ import print_function
 from django.core.management.base import BaseCommand, CommandError
-from gtfs.models import Agency, Route
+from gtfs.models import (
+    Agency, Route, FareRule, Frequency, Calendar, CalendarDate,
+    StopTime, Stop, FareAttribute, Trip
+)
+from shutil import make_archive, rmtree
+import tempfile
 import sys
+import csv
+import os
 
 help = '''
 Export GTFS to the whole feed
@@ -14,9 +21,9 @@ export        output as gtfs zip
 
 Options:
 --output      zip name (default: output.zip)
---route       route_id with comma (,) as separator
 --agency      agency_id with comma (,) as separator
-              NOTE: agency will override route always
+--route       route_id with comma (,) as separator
+              NOTE: route will override agency always
 '''
 
 class Command(BaseCommand):
@@ -58,9 +65,6 @@ class Command(BaseCommand):
         except Route.DoesNotExist:
             return []
 
-    def print_header(self):
-        print(self.header)
-
     def print_row(self, row):
         data = []
         for i in self.header.split(','):
@@ -85,11 +89,97 @@ class Command(BaseCommand):
                 print('%s. %s' % (order, a.agency_id))
                 order += 1
 
+    def shapes_file(self, dir, route_qs):
+        route_qs = route_qs.distinct()
+        if not route_qs:  # just skip if there is nothing at all
+            return
+        _header = route_qs[0].shapes_gtfs_header
+        with open(os.path.join(dir, 'shapes.txt'), 'a') as f:
+            cf = csv.DictWriter(f, fieldnames=_header)
+            cf.writeheader()
+            for route in route_qs:
+                for shape in route.export_to_shapes():
+                    cf.writerow(shape)
+
+    def gtfs_file(self, dir, queryset, filename, ):
+        queryset = queryset.distinct()
+        if not queryset:  # just skip if there is nothing at all
+            return
+        _header = queryset[0].gtfs_header
+        with open(os.path.join(dir, filename), 'a') as f:
+            cf = csv.DictWriter(f, fieldnames=_header)
+            cf.writeheader()
+            for row in queryset:
+                cf.writerow(row.gtfs_format())
+
+    def export_feed(self, routes, dir):
+        # agency
+        agencies = Agency.objects.filter(route__in=routes)
+        self.gtfs_file(dir, agencies, 'agency.txt')
+
+        # route
+        self.gtfs_file(dir, routes, 'routes.txt')
+        # shapes need special treatments
+        self.shapes_file(dir, routes)
+
+        # fare
+        fare_rules = FareRule.objects.filter(route__in=routes)
+        fare_attrs = FareAttribute.objects.filter(farerule__in=fare_rules)
+        self.gtfs_file(dir, fare_rules, 'fare_rules.txt')
+        self.gtfs_file(dir, fare_attrs, 'fare_attributes.txt')
+
+        # trip, shapes
+        trips = Trip.objects.filter(route__in=routes)
+        self.gtfs_file(dir, trips, 'trips.txt')
+
+        # frequency
+        freqs = Frequency.objects.filter(trip__in=trips)
+        self.gtfs_file(dir, freqs, 'frequencies.txt')
+
+        # stop_times, stop, transfer
+        stoptimes = StopTime.objects.filter(trip__in=trips)
+        stops = Stop.objects.filter(stoptime__in=stoptimes).distinct()
+        self.gtfs_file(dir, stoptimes, 'stop_times.txt')
+        self.gtfs_file(dir, stops, 'stops.txt')
+
+        # Calendar
+        srv_ids = [s['service'] for s in trips.values('service').distinct()]
+        calendars = Calendar.objects.filter(pk__in=srv_ids)
+        cal_exceptions = CalendarDate.objects.filter(service__in=calendars)
+        self.gtfs_file(dir, calendars, 'calendar.txt')
+        self.gtfs_file(dir, cal_exceptions, 'calendar_dates.txt')
+
+
     def handle(self, *args, **options):
         if 'list' in options['op']:
             return self.list_possible_agency_and_route()
 
         if 'export' in options['op']:
-            pass
+            agency_ids = options['agency_ids']
+            route_ids = options['route_ids']
+            if route_ids:
+                rts = Route.objects.filter(route_id__in=route_ids.split(','))
+            elif agency_ids:
+                q = { 'agency__agency_id__in': agency_ids.split(',') }
+                rts = Route.objects.filter(**q)
+            else:
+                self.help_and_exit('Missing parameters')
+
+            if not rts:
+                self.help_and_exit('Route could not be found')
+
+            tmpdir = tempfile.mkdtemp()
+            try:
+                _build = os.path.join(tmpdir, '_build')
+                print(_build)
+                if not os.path.isdir(_build):
+                    os.mkdir(_build)
+                self.export_feed(rts, _build)
+                print(options['output'])
+                # data = open(make_archive(tmparchive, 'zip', root_dir), 'rb').read()
+                make_archive(options['output'], 'zip', _build)
+            finally:
+                rmtree(tmpdir)
+                pass
 
         self.help_and_exit()

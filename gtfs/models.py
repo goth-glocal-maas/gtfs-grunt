@@ -43,13 +43,15 @@ class Agency(CompanyBoundModel):
 
     @property
     def gtfs_header(self):
-        return 'agency_id,agency_name,agency_url,agency_timezone,' \
-            'agency_phone,agency_lang,agency_fare_url,agency_email'
+        return [
+            'agency_id', 'agency_name', 'agency_url', 'agency_timezone',
+            'agency_phone', 'agency_lang', 'agency_fare_url', 'agency_email'
+        ]
 
     def gtfs_format(self):
         data = [
             ('agency_id', self.agency_id),
-            ('agency_name', self.name),
+            ('agency_name', self.name.encode('utf-8')),
             ('agency_url', self.url),
             ('agency_timezone', self.timezone),
             ('agency_phone', self.phone),
@@ -66,7 +68,7 @@ class Stop(CompanyBoundModel):
 
     "stop_id", "stop_code", "stop_name", "stop_desc", "stop_lat",
 		"stop_lon", "zone_id", "stop_url", "location_type", "parent_station",
-		"direction", "position"
+		"direction"
 
     stop_id,stop_name,stop_desc,stop_lat,stop_lon,stop_url,location_type,parent_station
 
@@ -104,22 +106,23 @@ class Stop(CompanyBoundModel):
 
     @property
     def gtfs_header(self):
-        return 'stop_id,stop_name,stop_desc,stop_lat,stop_lon,zone_id,' \
-            'stop_url,location_type,parent_station,direction,position'
+        return [
+            'stop_id', 'stop_name', 'stop_desc', 'stop_lat', 'stop_lon',
+            'zone_id', 'stop_url', 'location_type', 'parent_station',
+        ]
 
     def gtfs_format(self):
+        _parent = self.parent_station.stop_id if self.parent_station else ''
         data = [
             ('stop_id', self.stop_id),
-            ('stop_name', self.name),
+            ('stop_name', self.name.encode('utf-8')),
             ('stop_desc', self.stop_desc),
             ('stop_lat', self.location.coords[1]),
             ('stop_lon', self.location.coords[0]),
             ('zone_id', self.zone_id),
             ('stop_url', ''),
             ('location_type', self.location_type),
-            ('parent_station', self.parent_station.stop_id),
-            ('direction', ''),
-            ('position', ''),
+            ('parent_station', _parent),
         ]
         return OrderedDict(data)
 
@@ -190,8 +193,11 @@ class Route(CompanyBoundModel):
 
     @property
     def gtfs_header(self):
-        return 'route_type,route_id,route_short_name,route_long_name,' \
-        'agency_id,route_url,route_color,route_text_color,route_sort_order'
+        return [
+            'route_type', 'route_id', 'route_short_name', 'route_long_name',
+            'agency_id', 'route_url', 'route_color', 'route_text_color',
+            'route_sort_order'
+        ]
 
     @property
     def routes_gtfs_header(self):
@@ -199,14 +205,16 @@ class Route(CompanyBoundModel):
 
     @property
     def shapes_gtfs_header(self):
-        return 'shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence'
+        return [
+            'shape_id', 'shape_pt_lat', 'shape_pt_lon', 'shape_pt_sequence'
+        ]
 
     def gtfs_format(self):
         data = [
             ('route_type', self.route_type),
             ('route_id', self.route_id),
-            ('route_short_name', self.short_name),
-            ('route_long_name', self.long_name),
+            ('route_short_name', self.short_name.encode('utf-8')),
+            ('route_long_name', self.long_name.encode('utf-8')),
             ('agency_id', self.agency.agency_id),
             ('route_url', self.route_url),
             ('route_color', self.route_color.upper()),
@@ -287,9 +295,11 @@ class StopTime(CompanyBoundModel):
 
     @property
     def gtfs_header(self):
-        return 'trip_id,arrival_time,departure_time,stop_id,stop_sequence,' \
-            'stop_headsign,pickup_type,drop_off_type,shape_dist_traveled,' \
-            'timepoint'
+        return [
+            'trip_id', 'arrival_time', 'departure_time', 'stop_id',
+            'stop_sequence', 'stop_headsign', 'pickup_type', 'drop_off_type',
+            'shape_dist_traveled', 'timepoint'
+        ]
 
     def gtfs_format(self):
         data = [
@@ -330,21 +340,23 @@ class Calendar(CompanyBoundModel):
 
     @property
     def gtfs_header(self):
-        return 'service_id,monday,tuesday,wednesday,thursday,friday,' \
-            'saturday,sunday,start_date,end_date'
+        return [
+            'service_id', 'monday', 'tuesday', 'wednesday', 'thursday',
+            'friday', 'saturday', 'sunday', 'start_date', 'end_date'
+        ]
 
     def gtfs_format(self):
         data = [
             ('service_id', self.service_id),
-            ('monday', self.monday),
-            ('tuesday', self.tuesday),
-            ('wednesday', self.wednesday),
-            ('thursday', self.thursday),
-            ('friday', self.friday),
-            ('saturday', self.saturday),
-            ('sunday', self.sunday),
-            ('start_date', self.start_date.strftime('%Y-%m-%d')),
-            ('end_date', self.end_date.strftime('%Y-%m-%d')),
+            ('monday', '1' if self.monday else '0'),
+            ('tuesday', '1' if self.tuesday else '0'),
+            ('wednesday', '1' if self.wednesday else '0'),
+            ('thursday', '1' if self.thursday else '0'),
+            ('friday', '1' if self.friday else '0'),
+            ('saturday', '1' if self.saturday else '0'),
+            ('sunday', '1' if self.sunday else '0'),
+            ('start_date', self.start_date.strftime('%Y%m%d')),
+            ('end_date', self.end_date.strftime('%Y%m%d')),
         ]
         return OrderedDict(data)
 
@@ -397,7 +409,7 @@ class Trip(CompanyBoundModel):
         ('0', 'travel in one direction (e.g. outbound travel)'),
         ('1', 'travel in the opposite direction (e.g. inbound travel)'),
     )
-    direction_id = CharField('long name', max_length=1, default='',
+    direction_id = CharField('Direction', max_length=1, default='',
                              choices=DIRECTION_CHOICES)
     block_id = CharField('Block ID', max_length=15, blank=True)
 
@@ -433,8 +445,11 @@ class Trip(CompanyBoundModel):
 
     @property
     def gtfs_header(self):
-        return 'route_id,service_id,trip_id,trip_headsign,trip_short_name' \
-            'direction_id,block_id,shape_id,wheelchair_accessible,bike_allowed'
+        return [
+            'route_id', 'service_id', 'trip_id', 'trip_headsign',
+            'trip_short_name', 'direction_id', 'block_id', 'shape_id',
+            'wheelchair_accessible', 'bikes_allowed'
+        ]
 
     def gtfs_format(self):
         has_shape = self.route.shapes
@@ -448,7 +463,7 @@ class Trip(CompanyBoundModel):
             ('block_id', self.block_id),
             ('shape_id', self.route.route_id if has_shape else ''),
             ('wheelchair_accessible', self.wheelchair_accessible),
-            ('bike_allowed', self.bike_allowed),
+            ('bikes_allowed', self.bike_allowed),
         ]
         return OrderedDict(data)
 
@@ -496,8 +511,10 @@ class FareAttribute(CompanyBoundModel):
 
     @property
     def gtfs_header(self):
-        return 'fare_id,price,currency_type,payment_method,transfers,' \
+        return [
+            'fare_id', 'price', 'currency_type', 'payment_method', 'transfers',
             'transfer_duration'
+        ]
 
     def gtfs_format(self):
         data = [
@@ -541,7 +558,9 @@ class FareRule(CompanyBoundModel):
 
     @property
     def gtfs_header(self):
-        return 'fare_id,route_id,origin_id,destination_id,contains_id'
+        return [
+            'fare_id', 'route_id', 'origin_id', 'destination_id', 'contains_id'
+        ]
 
     def gtfs_format(self):
         data = [
@@ -570,7 +589,7 @@ class Frequency(CompanyBoundModel):
     trip = ForeignKey('Trip')
     start_time = TimeField('Start time')
     end_time = TimeField('End time')
-    headway_secs = IntegerField('Headway seconds', )
+    headway_secs = IntegerField('Headway seconds', default=1800)
     # optional
     EXACT_TIME_CHOICES = (
         ('0', 'Frequency-based trips are not exactly scheduled.'),
@@ -585,12 +604,17 @@ class Frequency(CompanyBoundModel):
     class Meta:
         verbose_name_plural = "Frequencies"
 
+
     def __str__(self):
-        return self.pk
+        return '%s [%s-%s] %s' % (
+            self.trip.trip_id, self.start_time, self.end_time,
+            self.headway_secs)
 
     @property
     def gtfs_header(self):
-        return 'trip_id,start_time,end_time,headway_secs,exact_times'
+        return [
+            'trip_id', 'start_time', 'end_time', 'headway_secs', 'exact_times'
+        ]
 
     def gtfs_format(self):
         data = [
