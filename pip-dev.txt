@@ -2,3 +2,5 @@ django
 transitfeed
 psycopg2-binary
 djangorestframework
+djangorestframework-jwt
+django-cors-headers

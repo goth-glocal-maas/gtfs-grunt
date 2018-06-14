@@ -1,6 +1,7 @@
-from rest_framework.serializers import ModelSerializer
+from rest_framework.serializers import ModelSerializer, SerializerMethodField
 from .models import Agency, Stop, Route, Trip, Calendar, CalendarDate, \
     FareAttribute, FareRule
+import json
 
 
 class AgencySerializer(ModelSerializer):
@@ -12,17 +13,29 @@ class AgencySerializer(ModelSerializer):
 
 
 class StopSerializer(ModelSerializer):
+    geojson = SerializerMethodField()
 
     class Meta:
         model = Stop
-        fields = '__all__'
+        exclude = ['location', ]
+
+    def get_geojson(self, obj):
+        if not obj.location:
+            return None
+        return json.loads(obj.location.geojson)
 
 
 class RouteSerializer(ModelSerializer):
+    geojson = SerializerMethodField()
 
     class Meta:
         model = Route
-        fields = '__all__'
+        exclude = ['shapes', ]
+
+    def get_geojson(self, obj):
+        if not obj.shapes:
+            return None
+        return json.loads(obj.shapes.geojson)
 
 
 class TripSerializer(ModelSerializer):

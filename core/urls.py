@@ -16,10 +16,18 @@ Including another URLconf
 from django.conf.urls import url, include
 from django.contrib import admin
 from django.conf import settings
+from rest_framework_jwt.views import (
+    obtain_jwt_token, refresh_jwt_token, verify_jwt_token)
+
 from .routers import router
 from web.views import HomeView
 
 urlpatterns = [
+
+    url('^api-token-auth/', obtain_jwt_token),
+    url('^api-token-refresh/', refresh_jwt_token),
+    url('^api-token-verify/', verify_jwt_token),
+
     url(r'^admin/', admin.site.urls),
     url(r'^v1/', include(router.urls)),
     url(r'^$', HomeView.as_view()),

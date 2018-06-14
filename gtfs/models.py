@@ -126,6 +126,12 @@ class Stop(CompanyBoundModel):
         ]
         return OrderedDict(data)
 
+    def merge_with(self, another_stop):
+        # change stop_times to this stop
+        another_stop.stoptime_set.all().update(stop=self)
+        # NOTE: if Transfer introduces, then should add something here too
+        another_stop.delete()
+
 
 @python_2_unicode_compatible
 class Route(CompanyBoundModel):
