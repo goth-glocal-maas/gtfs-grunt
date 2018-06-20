@@ -294,10 +294,11 @@ class StopTime(CompanyBoundModel):
 
     class Meta:
         verbose_name_plural = "Stop times"
-        ordering = ['trip', 'stop', 'sequence']
+        ordering = ['sequence', ]
 
     def __str__(self):
-        return '%s' % self.pk
+        return 'trip #%s seq#%s-%s' % (
+            self.trip.id, self.sequence, self.arrival)
 
     @property
     def gtfs_header(self):
@@ -554,7 +555,7 @@ class FareRule(CompanyBoundModel):
     it's overly complicated for zoning thing
     https://developers.google.com/transit/gtfs/reference/#fare_attributestxt
     '''
-    route = ForeignKey('Route', related_name='farerule_route')
+    route = ForeignKey('Route')
     # origin_id = CharField('Origin ID', max_length=100)
     # destination_id = CharField('Destination ID', max_length=100)
     # contains_id = CharField('Contains ID', max_length=100)
