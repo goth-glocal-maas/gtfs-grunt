@@ -1,4 +1,5 @@
-from rest_framework.serializers import ModelSerializer, SerializerMethodField
+from rest_framework.serializers import ModelSerializer, SerializerMethodField, CurrentUserDefault
+
 from .models import Agency, Stop, Route, Trip, Calendar, CalendarDate, \
     FareAttribute, FareRule
 import json
@@ -8,8 +9,14 @@ class AgencySerializer(ModelSerializer):
 
     class Meta:
         model = Agency
-        fields = ('agency_id', 'name', 'url', 'timezone', 'phone',
-            'lang', 'fare_url', 'email')
+        fields = ('id', 'agency_id', 'name', 'url', 'timezone',
+                  'phone', 'lang', 'fare_url', 'email')
+
+    def create(self, validated_data):
+        user = self.context['request'].user
+        validated_data['company'] = user.company
+        agency = Agency.objects.create(**validated_data)
+        return agency
 
 
 class StopSerializer(ModelSerializer):
