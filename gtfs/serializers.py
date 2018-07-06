@@ -1,8 +1,10 @@
 from rest_framework.serializers import ModelSerializer, SerializerMethodField, CurrentUserDefault
+from drf_extra_fields.geo_fields import PointField
 
 from .models import Agency, Stop, Route, Trip, Calendar, CalendarDate, \
     FareAttribute, FareRule, StopTime, Frequency
 import json
+
 
 
 class CompanyModelSerializer(ModelSerializer):
@@ -14,8 +16,7 @@ class CompanyModelSerializer(ModelSerializer):
     def create(self, validated_data):
         user = self.context['request'].user
         validated_data['company'] = user.company
-        obj = self.Meta.model.objects.create(**validated_data)
-        return obj
+        return super(CompanyModelSerializer, self).create(validated_data)
 
 
 class AgencySerializer(CompanyModelSerializer):
@@ -28,10 +29,11 @@ class AgencySerializer(CompanyModelSerializer):
 
 class StopSerializer(CompanyModelSerializer):
     geojson = SerializerMethodField()
+    location = PointField()
 
     class Meta:
         model = Stop
-        exclude = ['company', 'location', ]
+        exclude = ['company', ]
 
     def get_geojson(self, obj):
         if not obj.location:
@@ -45,6 +47,33 @@ class StopTimeSerializer(CompanyModelSerializer):
     class Meta:
         model = StopTime
         exclude = ['company', ]
+
+    def create(self, validated_data):
+        stop_data = validated_data.pop('stop')
+        if isinstance(stop_data, dict):
+            stop = Stop.objects.get(stop_id=stop_data['stop_id'])
+        elif isinstance(stop_data, int):
+            stop = Stop.objects.get(pk=stop_data)
+        validated_data['stop'] = stop
+        saved_obj = super(StopTimeSerializer, self).create(validated_data)
+        return saved_obj
+
+    def update(self, instance, validated_data):
+        stop_data = validated_data.pop('stop')
+        saved_obj = super(StopTimeSerializer, self).update(instance, validated_data)
+        try:
+            if isinstance(stop_data, dict):
+                stop = Stop.objects.get(stop_id=stop_data['stop_id'])
+            elif isinstance(stop_data, int):
+                stop = Stop.objects.get(pk=stop_data)
+            print instance.stop, stop
+            if instance.stop != stop:
+                saved_obj.stop = stop
+                saved_obj.save()
+        except Exception as e:
+            # NOTE: handle new Calendar creation?
+            pass
+        return saved_obj
 
 
 class CalendarDateSerializer(CompanyModelSerializer):
@@ -76,7 +105,7 @@ class FrequencySerializer(CompanyModelSerializer):
 class TripSerializer(CompanyModelSerializer):
     service = CalendarSerializer()
     frequency_set = FrequencySerializer(many=True, required=False)
-    stoptime = SerializerMethodField()
+    stoptime = SerializerMethodField(read_only=True)
 
     class Meta:
         model = Trip
@@ -85,11 +114,51 @@ class TripSerializer(CompanyModelSerializer):
     def get_stoptime(self, obj):
         st = obj.stoptime_set.all()
         if not st:
-            return None
+            return {
+                'count': 0,
+                'period': [],
+            }
         return {
             'count': st.count(),
             'period': [st[0].arrival, st[len(st)-1].arrival],
         }
+
+    def to_internal_value(self, data):
+        if 'stoptime' in data:
+            data.pop('stoptime')
+        data['route'] = Route.objects.get(pk=data['route'])
+        return data
+
+
+    def create(self, validated_data):
+        service_data = validated_data.pop('service')
+        freq_data = validated_data.pop('frequency_set')
+        # TODO: handle frequency set
+        if isinstance(service_data, dict):
+            serv = Calendar.objects.get(service_id=service_data['service_id'])
+        elif isinstance(service_data, int):
+            serv = Calendar.objects.get(pk=service_data)
+        validated_data['service'] = serv
+        saved_obj = super(TripSerializer, self).create(validated_data)
+        return saved_obj
+
+    def update(self, instance, validated_data):
+        service_data = validated_data.pop('service')
+        freq_data = validated_data.pop('frequency_set')
+        # TODO: handle frequency set
+        saved_obj = super(TripSerializer, self).update(instance, validated_data)
+        try:
+            if isinstance(service_data, dict):
+                serv = Calendar.objects.get(service_id=service_data['service_id'])
+            elif isinstance(service_data, int):
+                serv = Calendar.objects.get(pk=service_data)
+            if instance.service != serv:
+                saved_obj.service = serv
+                saved_obj.save()
+        except Exception as e:
+            # NOTE: handle new Calendar creation?
+            pass
+        return saved_obj
 
 
 class FareAttributeSerializer(CompanyModelSerializer):

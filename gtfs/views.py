@@ -13,6 +13,7 @@ from .serializers import AgencySerializer, StopSerializer, RouteSerializer, \
 
 
 class ModelViewSet(_ModelViewset):
+    filter_backends = (filters.SearchFilter, )
     custom_get_param = None
     custom_fk_field = ''
     custom_fk_field_rel = ''
@@ -41,12 +42,20 @@ class AgencyViewSet(ModelViewSet):
     queryset = Agency.objects.all()
     serializer_class = AgencySerializer
     # filter_fields = ('slug', )
-    # search_fields = ('slug', 'tags')
+    search_fields = ('slug', 'tags', 'agency_id')
 
 
 class StopViewSet(ModelViewSet):
     queryset = Stop.objects.all()
     serializer_class = StopSerializer
+    search_fields = (
+        'stop_id',
+        'name',
+        'stop_code',
+        'stoptime__trip__route__agency__name',
+        'stoptime__trip__route__short_name',
+        'stoptime__trip__route__route_id',
+    )
 
 
 class RouteViewSet(ModelViewSet):
@@ -63,6 +72,10 @@ class TripViewSet(ModelViewSet):
     custom_get_param = 'route'
     custom_fk_field = 'route'
     custom_fk_field_rel = 'route_id'
+    search_fields = (
+        'route__agency__name',
+        'route__agency__agency_id',
+    )
 
 
 class StopTimeViewSet(ModelViewSet):

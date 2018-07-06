@@ -447,6 +447,9 @@ class Trip(CompanyBoundModel):
         default='',
         choices=BIKE_CHOICES)
 
+    class Meta:
+        ordering = ('trip_id', )
+
     def __str__(self):
         return self.trip_id
 

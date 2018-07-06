@@ -4,3 +4,5 @@ psycopg2-binary
 djangorestframework
 djangorestframework-jwt
 django-cors-headers
+django-extra-fields
+django-filter
