@@ -1,4 +1,6 @@
-from rest_framework.serializers import ModelSerializer, SerializerMethodField, CurrentUserDefault
+from rest_framework.serializers import (
+    ModelSerializer, SerializerMethodField, CurrentUserDefault, ValidationError
+)
 from drf_extra_fields.geo_fields import PointField
 
 from .models import Agency, Stop, Route, Trip, Calendar, CalendarDate, \
@@ -126,9 +128,18 @@ class TripSerializer(CompanyModelSerializer):
     def to_internal_value(self, data):
         if 'stoptime' in data:
             data.pop('stoptime')
-        data['route'] = Route.objects.get(pk=data['route'])
+        if 'route' in data:
+            data['route'] = Route.objects.get(pk=data['route'])
         return data
 
+    def validate(self, data):
+        if 'route' not in data:
+            raise ValidationError({'route': 'missing route'})
+        if 'service' not in data:
+            raise ValidationError({'service': 'missing service'})
+        if 'frequency_set' not in data:
+            raise ValidationError({'frequency_set': 'missing frequency set'})
+        return data
 
     def create(self, validated_data):
         service_data = validated_data.pop('service')
@@ -182,6 +193,23 @@ class RouteSerializer(CompanyModelSerializer):
             return None
         return json.loads(obj.shapes.geojson)
 
+    def validate(self, data):
+        if 'agency_id' not in data or \
+                not ('agency' in data and 'id' in data['agency']):
+            raise ValidationError('missing agency')
+        return data
+
+    def to_internal_value(self, data):
+        obj = None
+        if 'agency_id' in data:
+            agency = data.pop('agency_id')
+            obj = Agency.objects.get(pk=agency)
+        elif 'agency' in data and 'id' in data['agency']:
+            agency = data.pop('agency')
+            obj = Agency.objects.get(pk=agency['id'])
+        if obj:
+            data['agency'] = obj
+        return data
 
 class FareRuleSerializer(CompanyModelSerializer):
     fare = FareAttributeSerializer()
