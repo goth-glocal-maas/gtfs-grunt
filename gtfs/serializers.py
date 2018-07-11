@@ -194,21 +194,16 @@ class RouteSerializer(CompanyModelSerializer):
         return json.loads(obj.shapes.geojson)
 
     def validate(self, data):
-        if 'agency_id' not in data or \
-                not ('agency' in data and 'id' in data['agency']):
+        if 'agency' not in data and data['agency']:
             raise ValidationError('missing agency')
         return data
 
     def to_internal_value(self, data):
-        obj = None
-        if 'agency_id' in data:
-            agency = data.pop('agency_id')
-            obj = Agency.objects.get(pk=agency)
-        elif 'agency' in data and 'id' in data['agency']:
-            agency = data.pop('agency')
-            obj = Agency.objects.get(pk=agency['id'])
-        if obj:
-            data['agency'] = obj
+        obj, agency = None, 0
+        agency = data.pop('agency')
+        agency_pk = agency if isinstance(agency, int) else agency['id']
+        obj = Agency.objects.get(pk=agency_pk)
+        data['agency'] = obj
         return data
 
 class FareRuleSerializer(CompanyModelSerializer):
