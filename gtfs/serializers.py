@@ -31,7 +31,8 @@ class AgencySerializer(CompanyModelSerializer):
 
 class StopSerializer(CompanyModelSerializer):
     geojson = SerializerMethodField()
-    location = PointField()
+    location = PointField(write_only=True)
+    distance_m = SerializerMethodField()
 
     class Meta:
         model = Stop
@@ -41,6 +42,12 @@ class StopSerializer(CompanyModelSerializer):
         if not obj.location:
             return None
         return json.loads(obj.location.geojson)
+
+    def get_distance_m(self, obj):
+        try:
+            return obj.distance.m
+        except Exception:
+            return None
 
 
 class StopTimeSerializer(CompanyModelSerializer):
@@ -68,7 +75,6 @@ class StopTimeSerializer(CompanyModelSerializer):
                 stop = Stop.objects.get(stop_id=stop_data['stop_id'])
             elif isinstance(stop_data, int):
                 stop = Stop.objects.get(pk=stop_data)
-            print instance.stop, stop
             if instance.stop != stop:
                 saved_obj.stop = stop
                 saved_obj.save()

@@ -6,6 +6,8 @@ from django.contrib.gis.db.models import (
     LineStringField, EmailField, PointField, DecimalField, TimeField,
 )
 from django.utils import timezone
+from django.contrib.gis.db.models.functions import Distance
+from django.contrib.gis.geos import GEOSGeometry
 from collections import OrderedDict
 
 
@@ -131,6 +133,14 @@ class Stop(CompanyBoundModel):
         another_stop.stoptime_set.all().update(stop=self)
         # NOTE: if Transfer introduces, then should add something here too
         another_stop.delete()
+
+    def distance(self, lat, lon):
+        if not self.location:
+            return None
+
+        pnt = GEOSGeometry('POINT(%s %s)' % (lon, lat), srid=4326)
+        qs = Stop.objects.filter(pk=self.pk)
+        return qs.annotate(distance=Distance('location', pnt))[0].distance
 
 
 @python_2_unicode_compatible
