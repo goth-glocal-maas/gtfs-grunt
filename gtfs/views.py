@@ -119,9 +119,9 @@ class CalendarDateViewSet(ModelViewSet):
 class FrequencyViewSet(ModelViewSet):
     queryset = Frequency.objects.all()
     serializer_class = FrequencySerializer
-    custom_get_param = 'route'
-    custom_fk_field = 'route'
-    custom_fk_field_rel = 'route_id'
+    custom_get_param = 'trip'
+    custom_fk_field = 'trip'
+    custom_fk_field_rel = 'trip_id'
 
 
 class FareAttributeViewSet(ModelViewSet):

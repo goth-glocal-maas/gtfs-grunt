@@ -31,7 +31,7 @@ class AgencySerializer(CompanyModelSerializer):
 
 class StopSerializer(CompanyModelSerializer):
     geojson = SerializerMethodField()
-    location = PointField(write_only=True)
+    location = PointField()
     distance_m = SerializerMethodField()
 
     class Meta:
