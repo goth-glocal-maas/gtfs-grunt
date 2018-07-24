@@ -4,7 +4,10 @@ from django.db.models import Q
 from django.contrib.gis.geos import GEOSGeometry
 from django.contrib.gis.db.models.functions import Distance
 from rest_framework import filters, viewsets, status
+from rest_framework.decorators import detail_route
 from rest_framework.viewsets import ModelViewSet as _ModelViewset
+from rest_framework.response import Response
+from rest_framework.exceptions import NotAcceptable
 
 from .models import Agency, Stop, Route, Trip, Calendar, CalendarDate, \
     FareAttribute, FareRule, StopTime, Frequency
@@ -73,6 +76,28 @@ class StopViewSet(ModelViewSet):
             dist = Distance('location', pnt)
             qs = qs.annotate(distance=dist).order_by('distance')
         return qs
+
+    @detail_route(methods=['post'], url_path='merge')
+    def merge(self, request, *args, **kwargs):
+        """Merge between 2 stops
+
+        request.body
+        stop <serializer-of-stop>  the stop that we're going to delete and
+                                   merge its connections with
+
+        return
+        stop <obj>
+        """
+        try:
+            stop_dict = request.data.get('stop')
+            to_be_merged = Stop.objects.get(pk=stop_dict['id'])
+            obj = self.get_object()
+            obj.merge_with(to_be_merged)
+            serialized = self.serializer_class(obj)
+            return Response(serialized.data)
+        except Exception:
+            # TODO: add logger here
+            raise NotAcceptable()
 
 
 class RouteViewSet(ModelViewSet):
