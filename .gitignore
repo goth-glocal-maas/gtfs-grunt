@@ -1,12 +1,15 @@
 
 *.sqlite3
 *.pyc
+
 .DS_Store
 .vscode
 
 settings_prod.py
+_output
+validation-results.html
 
 *.bz2
+*.zip
 
-_*
 node_modules
