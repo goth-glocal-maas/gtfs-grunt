@@ -58,6 +58,7 @@ INSTALLED_APPS = [
 
     'people',
     'gtfs',
+    'poi',
     'web',
 ]
 
