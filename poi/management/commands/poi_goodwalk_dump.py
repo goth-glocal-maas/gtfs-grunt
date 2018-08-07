@@ -8,14 +8,13 @@ import sys
 
 from poi.models import POI
 
-help = '''
-Import POI from GoodWalk POI dump (json files)
+HELP = '''Import POI from GoodWalk POI dump (json files)
 
 ./manage.py poi_goodwalk_dump <dir>
 '''
 
 class Command(BaseCommand):
-    help = help
+    help = HELP
 
     def add_arguments(self, parser):
         parser.add_argument('dir', nargs='+', type=str)
@@ -30,11 +29,15 @@ class Command(BaseCommand):
     def process_json(self, fpath):
         count = {'new': 0, 'exist': 0}
         with open(fpath, 'rt') as f:
-            data = j.loads(f.read())
+            try:
+                data = j.loads(f.read())
+            except:
+                return count
             if data['count'] == 0:
                 return count
             for i in data['poi']:
                 found = POI.objects.filter(gd_id=i['id'])
+                print('  new: %(new)6d  -- exist: %(exist)6d' % count, end='\r')
                 if found:
                     count['exist'] += 1
                     continue
@@ -48,6 +51,7 @@ class Command(BaseCommand):
                 p.location = pnt
                 p.save()
                 count['new'] += 1
+
         return count
 
     def handle(self, *args, **options):
@@ -65,13 +69,18 @@ class Command(BaseCommand):
                 subdirs.append(os.path.join(_path, _d))
 
         total = {'new': 0, 'exist': 0}
+        msg = 'new: %6d  exist: %6d >> %s'
         for subdir in subdirs:
             for _, _, files in os.walk(subdir):
                 for f in files:
                     fp = os.path.join(subdir, f)
+                    print(msg % (total['new'], total['exist'], f))
                     res = self.process_json(fp)
-                    total['new'] = res['new']
-                    total['exist'] = res['exist']
+                    total['new'] += res['new']
+                    total['exist'] += res['exist']
+                    print('\033[F', end='')
+
+        print('')
         print('Summary:')
         print('  NEW: %(new)5d    EXIST: %(exist)5d' % total)
         print('')
