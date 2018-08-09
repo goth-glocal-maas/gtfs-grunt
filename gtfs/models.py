@@ -8,6 +8,7 @@ from django.contrib.gis.db.models import (
 from django.utils import timezone
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import GEOSGeometry
+from django.db import connection
 from collections import OrderedDict
 
 
@@ -134,10 +135,10 @@ class Stop(CompanyBoundModel):
         # NOTE: if Transfer introduces, then should add something here too
         another_stop.delete()
 
-    def distance(self, lat, lon):
+    def distance(self, coords):
         if not self.location:
             return None
-
+        lon, lat = coords
         pnt = GEOSGeometry('POINT(%s %s)' % (lon, lat), srid=4326)
         qs = Stop.objects.filter(pk=self.pk)
         return qs.annotate(distance=Distance('location', pnt))[0].distance
@@ -206,6 +207,36 @@ class Route(CompanyBoundModel):
 
     def __str__(self):
         return self.route_id
+
+    @property
+    def route_length(self):
+        '''return length of line in meter
+
+        it does need to project to another system; otherwise,
+        we'll get length in degree
+
+        ref: https://gis.stackexchange.com/questions/180776/
+             get-linestring-length-in-meters-python-geodjango#181251
+        '''
+        if not self.shapes:
+            return -1
+
+        l = self.shapes
+        l.transform(3857)
+        _m = l.length
+        return _m / 1000.0
+
+    def line_locate_point(self, lat, lon):
+        if not self.line:
+            return None
+
+        cursor = connection.cursor()
+        q = 'SELECT ST_LineLocatePoint(shapes, ' \
+            'ST_SetSRID(ST_Point(%s,%s),4326))' \
+            ' FROM gtfs_route WHERE id=%s'
+        cursor.execute(q, [lon, lat, self.id])
+        row = cursor.fetchone()
+        return row[0]
 
     @property
     def gtfs_header(self):
