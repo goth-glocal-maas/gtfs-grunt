@@ -32,8 +32,8 @@ DATABASES = (
 )
 
 RAVEN_CONFIG = {
-    'dsn':
-    'https://7b4a9834e7f94374a20223b123512cc7:232ec78b52fc46a6b7d2c94df9e7662c@sentry.io/1248363',
+    'dsn': 'https://7b4a9834e7f94374a20223b123512cc7:232ec78b52fc46a6b7' \
+           'd2c94df9e7662c@sentry.io/1248363',
     # If you are using git, you can also automatically configure the
     # release based on the git info.
     'release': raven.fetch_git_sha(BASE_DIR),

@@ -3,6 +3,7 @@ from django.core.management.base import BaseCommand, CommandError
 from gtfs.models import (Agency, Route, FareRule, Frequency, Calendar,
                          CalendarDate, StopTime, Stop, FareAttribute, Trip)
 from shutil import make_archive, rmtree
+from datetime import datetime, timedelta
 import tempfile
 import sys
 import csv
@@ -11,55 +12,59 @@ import os
 HELP = '''
 Export GTFS to the whole feed
 
-./manage.py gtfs_feed <command> [options]
-
-Command:
-list          list available agency/route for exporting
-export        output as gtfs zip
+./manage.py stoptime_processor [options]
 
 Options:
---output      zip name (default: output.zip)
---agency      agency_id with comma (,) as separator
---route       route_id with comma (,) as separator
-              NOTE: route will override agency always
+--input      input file
+             e.g.
+             trip_id,stop_id
+             ZZ01,PK001
+
+or
+
+--trip       trip_id that we need to process
+--stops      stop_id with comma (,) as separator
 '''
 
 
-KM_PER_HR = 30
-KM_PER_MIN = 0.5
+KMPH = 30
 
 
 class Command(BaseCommand):
     help = HELP
-    header = Route.gtfs_header
 
     def add_arguments(self, parser):
-        parser.add_argument('op', nargs='+', type=str)
         parser.add_argument(
             '--force',
             action='store_true',
             dest='force',
-            default='force',
+            default=False,
             help='Force re-processing stoptime arrival ' \
               'time although it already has')
         parser.add_argument(
             '--input',
             action='store',
             dest='input_file',
-            default='input_file',
-            help='Input data')
+            default='',
+            help='Input csv file with header: trip_id, stop_id')
         parser.add_argument(
             '--trip',
             action='store',
             dest='trip_id',
-            default='trip_id',
-            help='Input data')
+            default='',
+            help='Trip we need to add StopTime')
+        parser.add_argument(
+            '--stops',
+            action='store',
+            dest='stop_ids',
+            default='s',
+            help='Stops that will align to the trip')
 
     def help_and_exit(self, message=''):
         if message:
             print()
             print(message)
-        print(self.HELP)
+        print(self.help)
         sys.exit()
 
     def process_trip_stoptime(self, trip, **kwargs):
@@ -84,31 +89,67 @@ class Command(BaseCommand):
             return 'No stop to work on'
 
         route = trip.route
-        stop_seq_time = [{
-            stop: s,
-            linear_ref: route.line_locate_point(s.location.coords),
-            arrival: None,
-        } for s in kwargs.get('stops')]
-        ordered_stopseq = sorted(stop_seq_time, key=lambda i: i['linear_ref'])
+        company = trip.company
         route_km = route.route_length
-        ordered_stopseq = map(
-            lambda i: i['arrival']=i['linear_ref'] * route_km * KM_PER_MIN,
-            ordered_stopseq)
-        print(ordered_stopseq)
+        speed = KMPH if route_km > 20 else KMPH * 0.7
+        today = datetime.today()
+        start = today.replace(hour=8, minute=0, second=0, microsecond=0)
+        print('Route (km): {0:.2f}'.format(route_km))
+        print('Time (min): {0:.2f}'.format(route_km / speed * 60))
+
+        def add_arrival(stop):
+            item = {
+                'stop': stop,
+                'linear_ref': route.line_locate_point(stop.location.coords),
+            }
+            minutes = item['linear_ref'] * route_km / speed * 60
+            minutes = '{0:.1f}'.format(minutes)
+            dt = start + timedelta(minutes=float(minutes))
+            item['arrival'] = dt.strftime('%H:%M:%S')
+            return item
+
+        stopseq = map(add_arrival, kwargs.get('stops'))
+        ordered_stopseq = sorted(stopseq, key=lambda i: i['linear_ref'])
+
+        seq = 0
+        # clear up stoptime related to this trip first
+        trip.stoptime_set.all().delete()
+        # then build a new list of stoptime
+        for i in ordered_stopseq:
+            seq += 1
+            st = StopTime(stop=i['stop'], trip=trip, company=company)
+            st.sequence = seq
+            st.arrival = '08:00' if seq == 1 else i['arrival']
+            st.departure = '08:00' if seq == 1 else i['arrival']
+            st.pickup_type = '0' if seq == 1 else '3'
+            st.drop_off_type = '3'
+            st.timepoint = '0'
+            st.save()
+
+        return trip.stoptime_set.all()
 
     def get_stop_in_object(self, stops):
         return map(lambda i: Stop.objects.get(stop_id=i), stops)
 
     def handle(self, *args, **options):
+        force = options['force']
         fp = options['input_file']
+        # TODO: handle input file with multiple trip_id
         trip_id = options['trip_id']
-        if not (fp or trip_id):
+        stop_ids_arg = options['stop_ids']
+
+        if not (fp or (trip_id and stop_ids_arg)):
             self.help_and_exit()
-        ssss = [
-            'pt-1-37', 'pt-2-22', 'pt-2-23', 'pt-2-24', 'pt-2-27', 'PK143',
-            'PK244', 'PK245', 'PK246', 'PK249', 'PK20', 'PK19', 'PK250',
-            'PK16', 'PK252', 'PK15'
-        ]
-        trip = Trip.objects.get(trip_id=trip_id)
-        self.process_trip_stoptime(trip, stops=ssss)
+
+        # file has higher priority
+        if fp:
+            print('FILE mode')
+        elif trip_id and stop_ids_arg:
+            stop_ids = map(lambda i: i.strip(), stop_ids_arg.split(','))
+            stops = self.get_stop_in_object(stop_ids)
+            trip = Trip.objects.get(trip_id=trip_id)
+            print('Trip: {}'.format(trip))
+            result = self.process_trip_stoptime(trip, stops=stops, force=force)
+            print(result)
+
         self.help_and_exit()

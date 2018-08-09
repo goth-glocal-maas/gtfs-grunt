@@ -226,15 +226,15 @@ class Route(CompanyBoundModel):
         _m = l.length
         return _m / 1000.0
 
-    def line_locate_point(self, lat, lon):
-        if not self.line:
+    def line_locate_point(self, coords):
+        if not self.shapes:
             return None
-
+        lon, lat = coords
         cursor = connection.cursor()
         q = 'SELECT ST_LineLocatePoint(shapes, ' \
             'ST_SetSRID(ST_Point(%s,%s),4326))' \
             ' FROM gtfs_route WHERE id=%s'
-        cursor.execute(q, [lon, lat, self.id])
+        cursor.execute(q, [lon, lat, self.pk])
         row = cursor.fetchone()
         return row[0]
 
