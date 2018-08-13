@@ -291,6 +291,20 @@ class Route(CompanyBoundModel):
             results.append(OrderedDict(_))
         return results
 
+    def get_one_trip(self):
+        trips = self.trip_set.all()
+        if trips.exists():
+            return trips[0]
+        trip_id = '{}01'.format(self.route_id)
+        calendar = Calendar.objects.all()[0]
+        t = Trip(company=self.company,
+                 route=self,
+                 trip_id=trip_id,
+                 service=calendar,
+                 direction_id='0')
+        t.save()
+        return t
+
 
 @python_2_unicode_compatible
 class StopTime(CompanyBoundModel):
