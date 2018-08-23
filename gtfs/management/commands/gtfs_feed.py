@@ -31,7 +31,7 @@ class Command(BaseCommand):
     header = Route.gtfs_header
 
     def add_arguments(self, parser):
-        parser.add_argument('op', nargs='+', type=str)
+        parser.add_argument('op', nargs='+', type=str, help='list / export')
         parser.add_argument(
             '--output',
             action='store',
@@ -110,6 +110,7 @@ class Command(BaseCommand):
             cf = csv.DictWriter(f, fieldnames=_header)
             cf.writeheader()
             for row in queryset:
+                data = row.gtfs_format()
                 cf.writerow(row.gtfs_format())
 
     def export_feed(self, routes, dir):

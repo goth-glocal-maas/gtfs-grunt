@@ -117,9 +117,9 @@ class Stop(CompanyBoundModel):
     def gtfs_format(self):
         _parent = self.parent_station.stop_id if self.parent_station else ''
         data = [
-            ('stop_id', self.stop_id),
+            ('stop_id', self.stop_id.encode('utf-8')),
             ('stop_name', self.name.encode('utf-8')),
-            ('stop_desc', self.stop_desc),
+            ('stop_desc', self.stop_desc.encode('utf-8')),
             ('stop_lat', self.location.coords[1]),
             ('stop_lon', self.location.coords[0]),
             ('zone_id', self.zone_id),
@@ -259,11 +259,11 @@ class Route(CompanyBoundModel):
     def gtfs_format(self):
         data = [
             ('route_type', self.route_type),
-            ('route_id', self.route_id),
+            ('route_id', self.route_id.encode('utf-8')),
             ('route_short_name', self.short_name.encode('utf-8')),
             ('route_long_name', self.long_name.encode('utf-8')),
             ('agency_id', self.agency.agency_id),
-            ('route_url', self.route_url),
+            ('route_url', self.route_url.encode('utf-8')),
             ('route_color', self.route_color.upper()),
             ('route_text_color', self.route_text_color.upper()),
             ('route_sort_order', str(self.route_sort_order)),
@@ -354,9 +354,9 @@ class StopTime(CompanyBoundModel):
             ('trip_id', self.trip.trip_id),
             ('arrival_time', self.arrival),
             ('departure_time', self.departure),
-            ('stop_id', self.stop.stop_id),
+            ('stop_id', self.stop.stop_id.encode('utf-8')),
             ('stop_sequence', self.sequence),
-            ('stop_headsign', self.stop_headsign),
+            ('stop_headsign', self.stop_headsign.encode('utf-8')),
             ('pickup_type', self.pickup_type),
             ('drop_off_type', self.drop_off_type),
             ('shape_dist_traveled', self.shape_dist_traveled),
@@ -508,8 +508,8 @@ class Trip(CompanyBoundModel):
             ('route_id', self.route.route_id),
             ('service_id', self.service.service_id),
             ('trip_id', self.trip_id),
-            ('trip_headsign', self.trip_headsign),
-            ('trip_short_name', self.short_name),
+            ('trip_headsign', self.trip_headsign.encode('utf-8')),
+            ('trip_short_name', self.short_name.encode('utf-8')),
             ('direction_id', self.direction_id),
             ('block_id', self.block_id),
             ('shape_id', self.route.route_id if has_shape else ''),
