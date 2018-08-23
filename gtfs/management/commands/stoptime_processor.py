@@ -131,6 +131,25 @@ class Command(BaseCommand):
     def get_stop_in_object(self, stops):
         return map(lambda i: Stop.objects.get(stop_id=i), stops)
 
+    def handle_file(self, fp):
+        result = {}
+        with open(fp, 'rt') as f:
+            cf = csv.DictReader(f)
+            for row in cf:
+                if row['route_id'] not in result:
+                    result[row['route_id']] = []
+                result[row['route_id']].append(row['stop_id'])
+
+        for route_id, stop_ids in result.items():
+            print('Route: {}'.format(route_id), end=' ')
+            route = Route.objects.get(route_id=route_id)
+            company = route.company
+            trip = route.get_one_trip()
+            print('Trip: {}'.format(trip))
+            stops = self.get_stop_in_object(stop_ids)
+            res = self.process_trip_stoptime(trip, stops=stops, force=True)
+            print(res)
+
     def handle(self, *args, **options):
         force = options['force']
         fp = options['input_file']
@@ -144,6 +163,7 @@ class Command(BaseCommand):
         # file has higher priority
         if fp:
             print('FILE mode')
+            self.handle_file(fp)
         elif trip_id and stop_ids_arg:
             stop_ids = map(lambda i: i.strip(), stop_ids_arg.split(','))
             stops = self.get_stop_in_object(stop_ids)
