@@ -70,7 +70,7 @@ class TripAdmin(OSMGeoAdmin):
 
 
 class StopTimeAdmin(OSMGeoAdmin):
-    list_filter = ('stop', )
+    list_filter = ('trip', 'stop', )
     list_display = ('trip_id', 'sequence', 'stop', 'arrival', 'departure', )
 
     def trip_id(self, obj):

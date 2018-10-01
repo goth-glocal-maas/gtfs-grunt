@@ -55,7 +55,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--google',
             action='store_true',
-            dest='Google spec',
+            dest='google_spec',
             default=False,
             help='no stop_desc, no trip_short_name, no route_short_name')
 
@@ -123,7 +123,7 @@ class Command(BaseCommand):
                     for _field in self.google_spec_optional:
                         if _field in data:
                             data[_field] = ''
-                cf.writerow(row.gtfs_format())
+                cf.writerow(data)
 
     def export_feed(self, routes, dir):
         # agency
@@ -164,7 +164,8 @@ class Command(BaseCommand):
 
 
     def handle(self, *args, **options):
-        self.google_spec = options['google']
+        self.google_spec = options['google_spec']
+        print('Google spec: {}'.format('enabled' if self.google_spec else 'disabled'))
 
         if 'list' in options['op']:
             return self.list_possible_agency_and_route()
@@ -196,5 +197,6 @@ class Command(BaseCommand):
             finally:
                 rmtree(tmpdir)
                 pass
+            return
 
         self.help_and_exit()
