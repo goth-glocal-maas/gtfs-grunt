@@ -29,6 +29,8 @@ Options:
 class Command(BaseCommand):
     help = help
     header = Route.gtfs_header
+    # google doesn't need this, then make them blank
+    google_spec_optional = ['stop_desc', 'trip_short_name', 'route_short_name']
 
     def add_arguments(self, parser):
         parser.add_argument('op', nargs='+', type=str, help='list / export')
@@ -50,6 +52,12 @@ class Command(BaseCommand):
             dest='route_ids',
             default='',
             help='route_id with comma (,) as separator')
+        parser.add_argument(
+            '--google',
+            action='store_true',
+            dest='Google spec',
+            default=False,
+            help='no stop_desc, no trip_short_name, no route_short_name')
 
     def help_and_exit(self, message=''):
         if message:
@@ -111,6 +119,10 @@ class Command(BaseCommand):
             cf.writeheader()
             for row in queryset:
                 data = row.gtfs_format()
+                if self.google_spec:
+                    for _field in self.google_spec_optional:
+                        if _field in data:
+                            data[_field] = ''
                 cf.writerow(row.gtfs_format())
 
     def export_feed(self, routes, dir):
@@ -152,6 +164,8 @@ class Command(BaseCommand):
 
 
     def handle(self, *args, **options):
+        self.google_spec = options['google']
+
         if 'list' in options['op']:
             return self.list_possible_agency_and_route()
 
