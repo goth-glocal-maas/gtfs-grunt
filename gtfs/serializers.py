@@ -185,6 +185,33 @@ class FareAttributeSerializer(CompanyModelSerializer):
         model = FareAttribute
         exclude = ['company', ]
 
+    def create(self, validated_data):
+        agency_data = validated_data.pop('agency')
+        agency = None
+        if isinstance(agency_data, dict):
+            agency = Agency.objects.get(agency_id=agency_data['agency_id'])
+        elif isinstance(agency_data, int):
+            agency = Agency.objects.get(pk=agency_data)
+        validated_data['agency'] = agency
+        saved_obj = super(FareAttributeSerializer, self).create(validated_data)
+        return saved_obj
+
+    def update(self, instance, validated_data):
+        agency_data = validated_data.pop('agency')
+        saved_obj = super(FareAttributeSerializer, self).update(instance, validated_data)
+        try:
+            if isinstance(agency_data, dict):
+                agency = Agency.objects.get(agency_id=agency_data['agency_id'])
+            elif isinstance(agency_data, int):
+                agency = Agency.objects.get(pk=agency_data)
+            if instance.agency != agency:
+                saved_obj.agency = agency
+                saved_obj.save()
+        except Exception as e:
+            # NOTE: handle new Calendar creation?
+            pass
+        return saved_obj
+
 
 class RouteSerializer(CompanyModelSerializer):
     geojson = SerializerMethodField()
