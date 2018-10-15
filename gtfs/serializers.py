@@ -208,7 +208,6 @@ class FareAttributeSerializer(CompanyModelSerializer):
                 saved_obj.agency = agency
                 saved_obj.save()
         except Exception as e:
-            # NOTE: handle new Calendar creation?
             pass
         return saved_obj
 
@@ -246,3 +245,29 @@ class FareRuleSerializer(CompanyModelSerializer):
     class Meta:
         model = FareRule
         exclude = ['company', ]
+
+    def create(self, validated_data):
+        fare_data = validated_data.pop('fare')
+        fare = None
+        if isinstance(fare_data, dict):
+            fare = FareAttribute.objects.get(fare_id=fare_data['fare_id'])
+        elif isinstance(fare_data, int):
+            fare = FareAttribute.objects.get(pk=fare_data)
+        validated_data['fare'] = fare
+        saved_obj = super(FareRuleSerializer, self).create(validated_data)
+        return saved_obj
+
+    def update(self, instance, validated_data):
+        fare_data = validated_data.pop('fare')
+        saved_obj = super(FareRuleSerializer, self).update(instance, validated_data)
+        try:
+            if isinstance(fare_data, dict):
+                fare = FareAttribute.objects.get(fare_id=fare_data['fare_id'])
+            elif isinstance(fare_data, int):
+                fare = FareAttribute.objects.get(pk=fare_data)
+            if instance.fare != fare:
+                saved_obj.fare = fare
+                saved_obj.save()
+        except Exception as e:
+            pass
+        return saved_obj
