@@ -152,6 +152,7 @@ class FrequencyViewSet(ModelViewSet):
 class FareAttributeViewSet(ModelViewSet):
     queryset = FareAttribute.objects.all()
     serializer_class = FareAttributeSerializer
+    search_fields = ('fare_id', 'price')
 
 
 class FareRuleViewSet(ModelViewSet):

@@ -615,8 +615,8 @@ class FareRule(CompanyBoundModel):
     '''
     route = ForeignKey('Route', blank=True, null=True)
     origin_id = CharField('Origin ID', max_length=100)
-    destination_id = CharField('Destination ID', max_length=100)
-    contains_id = CharField('Contains ID', max_length=100)
+    destination_id = CharField('Destination ID', max_length=100, blank=True)
+    contains_id = CharField('Contains ID', max_length=100, blank=True)
 
     def __str__(self):
         return self.pk
