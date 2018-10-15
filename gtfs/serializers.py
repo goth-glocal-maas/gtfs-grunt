@@ -179,6 +179,7 @@ class TripSerializer(CompanyModelSerializer):
 
 
 class FareAttributeSerializer(CompanyModelSerializer):
+    agency = AgencySerializer()
 
     class Meta:
         model = FareAttribute

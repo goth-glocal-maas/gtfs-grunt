@@ -3,7 +3,6 @@
 *.pyc
 
 .DS_Store
-.vscode
 
 settings_prod.py
 _output

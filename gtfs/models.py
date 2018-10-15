@@ -566,7 +566,7 @@ class FareAttribute(CompanyBoundModel):
     # optional
     agency = ForeignKey('Agency', null=True, blank=True,
                         related_name='fare_agency')
-    transfer_duration = CharField('Transfer duration', max_length=2)
+    transfer_duration = CharField('Transfer duration', max_length=4)
 
     class Meta:
         unique_together = ('company', 'fare_id')

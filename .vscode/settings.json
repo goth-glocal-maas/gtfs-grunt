@@ -1,0 +1,9 @@
+{
+  "python.pythonPath": "~/.virtualenvs/gtfs-grunt/bin/python",
+    "todo-tree.flat": false,
+    "todo-tree.grouped": false,
+    "todo-tree.expanded": true,
+    "workbench.colorCustomizations": {
+      "titleBar.activeBackground": "#e24a4a"
+    }
+  }
