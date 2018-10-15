@@ -47,7 +47,7 @@ class AgencyViewSet(ModelViewSet):
     queryset = Agency.objects.all()
     serializer_class = AgencySerializer
     # filter_fields = ('slug', )
-    search_fields = ('slug', 'tags', 'agency_id')
+    search_fields = ('name', 'url', 'email', 'agency_id')
 
 
 class StopViewSet(ModelViewSet):
