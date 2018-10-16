@@ -199,3 +199,7 @@ JWT_AUTH = {
     'JWT_REFRESH_EXPIRATION_DELTA': timedelta(days=360),
     'JWT_AUTH_HEADER_PREFIX': 'Bearer',  # default: 'JWT'
 }
+
+
+if os.path.isfile(os.path.join(BASE_DIR, 'settings_prod.py')):
+    from settings_prod import *

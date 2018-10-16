@@ -61,6 +61,7 @@ class StopViewSet(ModelViewSet):
         'stoptime__trip__route__short_name',
         'stoptime__trip__route__route_id',
     )
+    search_fields = ('stop_code', 'stop_id', 'name', 'stop_desc')
 
     def get_queryset(self):
         qs = super(StopViewSet, self).get_queryset()
@@ -106,6 +107,9 @@ class RouteViewSet(ModelViewSet):
     custom_get_param = 'agency'
     custom_fk_field = 'agency'
     custom_fk_field_rel = 'agency_id'
+    search_fields = (
+        'route_id', 'agency__agency_id', 'short_name', 'long_name', 'desc',
+    )
 
 
 class TripViewSet(ModelViewSet):
@@ -131,6 +135,7 @@ class StopTimeViewSet(ModelViewSet):
 class CalendarViewSet(ModelViewSet):
     queryset = Calendar.objects.all()
     serializer_class = CalendarSerializer
+    search_fields = ('service_id', )
 
 
 class CalendarDateViewSet(ModelViewSet):

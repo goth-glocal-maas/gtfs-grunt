@@ -6,6 +6,7 @@ from drf_extra_fields.geo_fields import PointField
 from .models import Agency, Stop, Route, Trip, Calendar, CalendarDate, \
     FareAttribute, FareRule, StopTime, Frequency
 import json
+import polyline
 
 
 
@@ -224,7 +225,9 @@ class RouteSerializer(CompanyModelSerializer):
     def get_geojson(self, obj):
         if not obj.shapes:
             return None
-        return json.loads(obj.shapes.geojson)
+        _geojson = json.loads(obj.shapes.geojson)
+        _geojson['coordinates'] = polyline.encode(_geojson['coordinates'])
+        return _geojson
 
     def validate(self, data):
         if 'agency' not in data and data['agency']:
