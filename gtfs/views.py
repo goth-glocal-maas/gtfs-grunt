@@ -8,6 +8,7 @@ from rest_framework.decorators import detail_route
 from rest_framework.viewsets import ModelViewSet as _ModelViewset
 from rest_framework.response import Response
 from rest_framework.exceptions import NotAcceptable
+from json import loads
 
 from .models import Agency, Stop, Route, Trip, Calendar, CalendarDate, \
     FareAttribute, FareRule, StopTime, Frequency
@@ -166,3 +167,39 @@ class FareRuleViewSet(ModelViewSet):
     custom_get_param = 'route'
     custom_fk_field = 'route'
     custom_fk_field_rel = 'route_id'
+
+    def create(self, request):
+        body = request.body
+        data = loads(body)
+        dst_ids = data['destination_id']
+        ctn_ids = data['contains_id']
+        if not isinstance(data['destination_id'], list) and \
+                data['destination_id']:
+            dst_ids = [data['destination_id'], ]
+        if not isinstance(data['contains_id'], list) and \
+                data['contains_id']:
+            ctn_ids = [data['contains_id'], ]
+
+        if len(dst_ids) < 2 and len(ctn_ids) < 2:
+            if isinstance(data['destination_id'], list):
+                dst_ids = data['destination_id'][0]
+            if isinstance(data['contains_id'], list):
+                ctn_ids = data['contains_id'][0]
+            return super(FareRuleViewSet, self).create(request)
+
+        # dealing with multi
+        _ids = dst_ids if dst_ids else ctn_ids
+        field_name = 'destination_id' if dst_ids else 'contains_id'
+        objs = []
+        company = request.user.company
+        for _id in _ids:
+            one = data.copy()
+            one[field_name] = _id
+            one['company'] = company
+            one['fare'] = FareAttribute.objects.get(pk=one['fare']['id'])
+            if one['route']:
+                one['route'] = Route.objects.get(pk=one['route']['id'])
+            _instance = FareRule.objects.create(**one)
+            objs.append(_instance)
+        serialized = self.serializer_class(objs, many=True)
+        return Response(serialized.data, status=status.HTTP_201_CREATED)

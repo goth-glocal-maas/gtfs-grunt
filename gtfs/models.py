@@ -572,7 +572,7 @@ class FareAttribute(CompanyBoundModel):
         unique_together = ('company', 'fare_id')
 
     def __str__(self):
-        return self.pk
+        return self.fare_id
 
     @property
     def gtfs_header(self):
@@ -619,7 +619,7 @@ class FareRule(CompanyBoundModel):
     contains_id = CharField('Contains ID', max_length=100, blank=True)
 
     def __str__(self):
-        return self.pk
+        return str(self.pk)
 
     @property
     def gtfs_header(self):

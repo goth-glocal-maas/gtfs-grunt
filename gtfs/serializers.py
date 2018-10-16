@@ -180,7 +180,7 @@ class TripSerializer(CompanyModelSerializer):
 
 
 class FareAttributeSerializer(CompanyModelSerializer):
-    agency = AgencySerializer()
+    agency = AgencySerializer(allow_null=True)
 
     class Meta:
         model = FareAttribute
@@ -213,10 +213,89 @@ class FareAttributeSerializer(CompanyModelSerializer):
         return saved_obj
 
 
+class RouteAsChildSerializer(CompanyModelSerializer):
+
+    class Meta:
+        model = Route
+        fields = ['id', 'route_id', 'short_name', 'long_name', 'route_type',
+                  'agency', 'route_color', 'route_text_color', ]
+
+
+class FareRuleSerializer(CompanyModelSerializer):
+    fare = FareAttributeSerializer()
+    route = RouteAsChildSerializer(allow_null=True)
+
+    class Meta:
+        model = FareRule
+        exclude = ['company', ]
+
+    def validate(self, data):
+        if not (data['destination_id'] or data['contains_id']):
+            _msg = 'Either one of destination_id or contains_id needed'
+            raise ValidationError(_msg)
+        if len(data['destination_id']) and len(data['contains_id']):
+            _msg = 'Either one of destination_id or contains_id is accepted,' \
+                   ' not both'
+            raise ValidationError(_msg)
+        return data
+
+    def create(self, validated_data):
+        fare_data = validated_data.pop('fare')
+        fare = None
+        if isinstance(fare_data, dict):
+            fare = FareAttribute.objects.get(fare_id=fare_data['fare_id'])
+        elif isinstance(fare_data, int):
+            fare = FareAttribute.objects.get(pk=fare_data)
+        validated_data['fare'] = fare
+
+        route_data = validated_data.pop('route')
+        route = None
+        if isinstance(route_data, dict):
+            route = Route.objects.get(route_id=route_data['route_id'])
+        elif isinstance(route_data, int):
+            route = Route.objects.get(pk=route_data)
+        validated_data['route'] = route
+
+        return super(FareRuleSerializer, self).create(validated_data)
+
+    def update(self, instance, validated_data):
+        fare_data = validated_data.pop('fare')
+        try:
+            route_data = validated_data.pop('route')
+        except KeyError:
+            route_data = None
+        saved_obj = super(FareRuleSerializer, self).update(instance, validated_data)
+        changes = 0
+        try:
+            if isinstance(fare_data, dict):
+                fare = FareAttribute.objects.get(fare_id=fare_data['fare_id'])
+            elif isinstance(fare_data, int):
+                fare = FareAttribute.objects.get(pk=fare_data)
+            if instance.fare != fare:
+                saved_obj.fare = fare
+                changes += 1
+        except Exception as e:
+            pass
+        try:
+            if isinstance(route_data, dict):
+                route = Route.objects.get(route_id=route_data['route_id'])
+            elif isinstance(route_data, int):
+                route = Route.objects.get(pk=route_data)
+            if instance.route != route:
+                saved_obj.route = route
+                changes += 1
+        except Exception as e:
+            pass
+
+        if changes > 0:
+            saved_obj.save()
+        return saved_obj
+
+
 class RouteSerializer(CompanyModelSerializer):
     geojson = SerializerMethodField()
     trip_set = TripSerializer(many=True, required=False)
-    farerule_set = FareAttributeSerializer(many=True, required=False)
+    # farerule_set = FareRuleSerializer(many=True, required=False)
 
     class Meta:
         model = Route
@@ -241,36 +320,3 @@ class RouteSerializer(CompanyModelSerializer):
         obj = Agency.objects.get(pk=agency_pk)
         data['agency'] = obj
         return data
-
-class FareRuleSerializer(CompanyModelSerializer):
-    fare = FareAttributeSerializer()
-
-    class Meta:
-        model = FareRule
-        exclude = ['company', ]
-
-    def create(self, validated_data):
-        fare_data = validated_data.pop('fare')
-        fare = None
-        if isinstance(fare_data, dict):
-            fare = FareAttribute.objects.get(fare_id=fare_data['fare_id'])
-        elif isinstance(fare_data, int):
-            fare = FareAttribute.objects.get(pk=fare_data)
-        validated_data['fare'] = fare
-        saved_obj = super(FareRuleSerializer, self).create(validated_data)
-        return saved_obj
-
-    def update(self, instance, validated_data):
-        fare_data = validated_data.pop('fare')
-        saved_obj = super(FareRuleSerializer, self).update(instance, validated_data)
-        try:
-            if isinstance(fare_data, dict):
-                fare = FareAttribute.objects.get(fare_id=fare_data['fare_id'])
-            elif isinstance(fare_data, int):
-                fare = FareAttribute.objects.get(pk=fare_data)
-            if instance.fare != fare:
-                saved_obj.fare = fare
-                saved_obj.save()
-        except Exception as e:
-            pass
-        return saved_obj
