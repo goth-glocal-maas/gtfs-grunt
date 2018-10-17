@@ -171,8 +171,8 @@ class FareRuleViewSet(ModelViewSet):
     def create(self, request):
         body = request.body
         data = loads(body)
-        dst_ids = data['destination_id'].split(',')
-        ctn_ids = data['contains_id'].split(',')
+        dst_ids = data['destination_id'].split(',') if data['destination_id'] else []
+        ctn_ids = data['contains_id'].split(',') if data['contains_id'] else []
 
         if len(dst_ids) < 2 and len(ctn_ids) < 2:
             return super(FareRuleViewSet, self).create(request)
