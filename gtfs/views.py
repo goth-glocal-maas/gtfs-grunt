@@ -164,27 +164,17 @@ class FareAttributeViewSet(ModelViewSet):
 class FareRuleViewSet(ModelViewSet):
     queryset = FareRule.objects.all()
     serializer_class = FareRuleSerializer
-    custom_get_param = 'route'
-    custom_fk_field = 'route'
-    custom_fk_field_rel = 'route_id'
+    custom_get_param = 'fareattr'
+    custom_fk_field = 'fare'
+    custom_fk_field_rel = 'fare_id'
 
     def create(self, request):
         body = request.body
         data = loads(body)
-        dst_ids = data['destination_id']
-        ctn_ids = data['contains_id']
-        if not isinstance(data['destination_id'], list) and \
-                data['destination_id']:
-            dst_ids = [data['destination_id'], ]
-        if not isinstance(data['contains_id'], list) and \
-                data['contains_id']:
-            ctn_ids = [data['contains_id'], ]
+        dst_ids = data['destination_id'].split(',')
+        ctn_ids = data['contains_id'].split(',')
 
         if len(dst_ids) < 2 and len(ctn_ids) < 2:
-            if isinstance(data['destination_id'], list):
-                dst_ids = data['destination_id'][0]
-            if isinstance(data['contains_id'], list):
-                ctn_ids = data['contains_id'][0]
             return super(FareRuleViewSet, self).create(request)
 
         # dealing with multi

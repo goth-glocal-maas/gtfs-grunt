@@ -96,7 +96,7 @@ class GtfsApiTests(APITestCase):
             'fare': serialized_fare50,
             'route': None,
             'origin_id': self.stop_a.stop_id,
-            'destination_id': [self.stop_b.stop_id, self.stop_c.stop_id],
+            'destination_id': ','.join([self.stop_b.stop_id, self.stop_c.stop_id]),
             'contains_id': '',
         }
         resp = self.client.post(
@@ -110,7 +110,7 @@ class GtfsApiTests(APITestCase):
             'fare': serialized_fare100,
             'route': serialized_route,
             'origin_id': self.stop_a.stop_id,
-            'destination_id': [self.stop_b.stop_id, self.stop_c.stop_id],
+            'destination_id': ','.join([self.stop_b.stop_id, self.stop_c.stop_id]),
             'contains_id': '',
         }
         resp = self.client.post(
@@ -125,7 +125,7 @@ class GtfsApiTests(APITestCase):
             'route': serialized_route,
             'origin_id': self.stop_c.stop_id,
             'destination_id': '',
-            'contains_id': [self.stop_b.stop_id, self.stop_a.stop_id],
+            'contains_id': ','.join([self.stop_b.stop_id, self.stop_a.stop_id]),
         }
         resp = self.client.post(
             url, data,
