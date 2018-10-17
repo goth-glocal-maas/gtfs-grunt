@@ -125,6 +125,15 @@ class Command(BaseCommand):
                             data[_field] = ''
                 cf.writerow(data)
 
+    def handle_fare(self, agency):
+        # fare_rules = FareRule.objects.filter(route__in=routes)
+        # fare_attrs = FareAttribute.objects.filter(farerule__in=fare_rules)
+        # self.gtfs_file(dir, fare_rules, 'fare_rules.txt')
+        # self.gtfs_file(dir, fare_attrs, 'fare_attributes.txt')
+        fare_attrs = FareAttributes.objects.filter(agency=agency)
+        fare_rules = FareRule.objects.filter(fare__in=fare_attrs)
+        return None
+
     def export_feed(self, routes, dir):
         # agency
         agencies = Agency.objects.filter(route__in=routes)
@@ -136,10 +145,8 @@ class Command(BaseCommand):
         self.shapes_file(dir, routes)
 
         # fare
-        fare_rules = FareRule.objects.filter(route__in=routes)
-        fare_attrs = FareAttribute.objects.filter(farerule__in=fare_rules)
-        self.gtfs_file(dir, fare_rules, 'fare_rules.txt')
-        self.gtfs_file(dir, fare_attrs, 'fare_attributes.txt')
+        for agency in agencies:
+            self.handle_fare(agency)
 
         # trip, shapes
         trips = Trip.objects.filter(route__in=routes)

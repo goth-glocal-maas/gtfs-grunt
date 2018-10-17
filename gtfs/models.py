@@ -578,17 +578,17 @@ class FareAttribute(CompanyBoundModel):
     def gtfs_header(self):
         return [
             'fare_id', 'price', 'currency_type', 'payment_method', 'transfers',
-            'transfer_duration'
+            'agency_id', 'transfer_duration'
         ]
 
     def gtfs_format(self):
         data = [
-            ('fare_id', self.fare.fare_id),
-            ('price', self.route.route_id),
+            ('fare_id', self.fare_id),
+            ('price', self.price),
             ('currency_type', self.currency_type),
             ('payment_method', self.payment_method),
             ('transfers', self.transfer),
-            ('agency_id', self.agency.agency_id),
+            ('agency_id', self.agency.agency_id if self.agency else ''),
             ('transfer_duration', self.transfer_duration),
         ]
         return OrderedDict(data)
@@ -623,18 +623,30 @@ class FareRule(CompanyBoundModel):
 
     @property
     def gtfs_header(self):
-        return [
-            'fare_id', 'route_id', 'origin_id', 'destination_id', 'contains_id'
-        ]
+        if self.destination_id:
+            return ['fare_id', 'origin_id', 'destination_id']
+        elif self.contains_id:
+            return ['fare_id', 'contains_id']
+        elif self.route:
+            return ['fare_id', 'route_id']
 
     def gtfs_format(self):
-        data = [
-            ('fare_id', self.fare.fare_id),
-            ('route_id', self.route.route_id),
-            ('origin_id', ''),
-            ('destination_id', ''),
-            ('contains_id', ''),
-        ]
+        if self.destination_id:
+            data = [
+                ('fare_id', self.fare.fare_id),
+                ('origin_id', self.origin_id),
+                ('destination_id', self.destination_id),
+            ]
+        elif self.contains_id:
+            data = [
+                ('fare_id', self.fare.fare_id),
+                ('contains_id', self.contains_id),
+            ]
+        elif self.route:
+            data = [
+                ('fare_id', self.fare.fare_id),
+                ('route_id', self.route.route_id if self.route else ''),
+            ]
         return OrderedDict(data)
 
 
