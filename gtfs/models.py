@@ -51,7 +51,7 @@ class Agency(CompanyBoundModel):
             'agency_phone', 'agency_lang', 'agency_fare_url', 'agency_email'
         ]
 
-    def gtfs_format(self):
+    def gtfs_format(self, **kwargs):
         data = [
             ('agency_id', self.agency_id),
             ('agency_name', self.name.encode('utf-8')),
@@ -114,15 +114,18 @@ class Stop(CompanyBoundModel):
             'zone_id', 'stop_url', 'location_type', 'parent_station',
         ]
 
-    def gtfs_format(self):
+    def gtfs_format(self, **kwargs):
         _parent = self.parent_station.stop_id if self.parent_station else ''
+        _zone_id = self.zone_id
+        if kwargs.get('has_fare') and not _zone_id:
+            _zone_id = self.stop_id.encode('utf-8')
         data = [
             ('stop_id', self.stop_id.encode('utf-8')),
             ('stop_name', self.name.encode('utf-8')),
             ('stop_desc', self.stop_desc.encode('utf-8')),
             ('stop_lat', self.location.coords[1]),
             ('stop_lon', self.location.coords[0]),
-            ('zone_id', self.zone_id),
+            ('zone_id', _zone_id),
             ('stop_url', ''),
             ('location_type', self.location_type),
             ('parent_station', _parent),
@@ -256,7 +259,7 @@ class Route(CompanyBoundModel):
             'shape_id', 'shape_pt_lat', 'shape_pt_lon', 'shape_pt_sequence'
         ]
 
-    def gtfs_format(self):
+    def gtfs_format(self, **kwargs):
         data = [
             ('route_type', self.route_type),
             ('route_id', self.route_id.encode('utf-8')),
@@ -363,7 +366,7 @@ class StopTime(CompanyBoundModel):
             'shape_dist_traveled', 'timepoint'
         ]
 
-    def gtfs_format(self):
+    def gtfs_format(self, **kwargs):
         data = [
             ('trip_id', self.trip.trip_id),
             ('arrival_time', self.arrival),
@@ -407,7 +410,7 @@ class Calendar(CompanyBoundModel):
             'friday', 'saturday', 'sunday', 'start_date', 'end_date'
         ]
 
-    def gtfs_format(self):
+    def gtfs_format(self, **kwargs):
         data = [
             ('service_id', self.service_id),
             ('monday', '1' if self.monday else '0'),
@@ -447,7 +450,7 @@ class CalendarDate(CompanyBoundModel):
     def gtfs_header(self):
         return 'service_id,date,exception_type'
 
-    def gtfs_format(self):
+    def gtfs_format(self, **kwargs):
         data = [
             ('service_id', self.service.service_id),
             ('date', self.date.strftime('%Y-%m-%d')),
@@ -516,7 +519,7 @@ class Trip(CompanyBoundModel):
             'wheelchair_accessible', 'bikes_allowed'
         ]
 
-    def gtfs_format(self):
+    def gtfs_format(self, **kwargs):
         has_shape = self.route.shapes
         data = [
             ('route_id', self.route.route_id),
@@ -581,7 +584,7 @@ class FareAttribute(CompanyBoundModel):
             'agency_id', 'transfer_duration'
         ]
 
-    def gtfs_format(self):
+    def gtfs_format(self, **kwargs):
         data = [
             ('fare_id', self.fare_id),
             ('price', self.price),
@@ -630,7 +633,7 @@ class FareRule(CompanyBoundModel):
         elif self.route:
             return ['fare_id', 'route_id']
 
-    def gtfs_format(self):
+    def gtfs_format(self, **kwargs):
         if self.destination_id:
             data = [
                 ('fare_id', self.fare.fare_id),
@@ -693,7 +696,7 @@ class Frequency(CompanyBoundModel):
             'trip_id', 'start_time', 'end_time', 'headway_secs', 'exact_times'
         ]
 
-    def gtfs_format(self):
+    def gtfs_format(self, **kwargs):
         data = [
             ('trip_id', self.trip.trip_id),
             ('start_time', self.start_time),

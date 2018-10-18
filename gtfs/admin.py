@@ -43,19 +43,26 @@ class RouteAdmin(OSMGeoAdmin):
 
 
 class CalendarAdmin(OSMGeoAdmin):
-    pass
+    list_display = ('service_id', 'start_date', 'end_date')
+    search_fields = ('service_id', )
 
 
 class CalendarDateAdmin(OSMGeoAdmin):
-    pass
+    list_display = ('service', 'date', 'exception_type')
+    list_filter = ('exception_type', )
+    search_fields = ('date', 'service__service_id')
 
 
 class FareAttributeAdmin(OSMGeoAdmin):
-    pass
+    list_display = ('fare_id', 'price', 'currency_type', 'payment_method')
+    list_filter = ('currency_type', 'agency')
+    search_fields = ('fare_id', )
 
 
 class FareRuleAdmin(OSMGeoAdmin):
-    pass
+    list_filter = ('fare', 'origin_id', 'destination_id', 'contains_id')
+    search_fields = ('origin_id', 'destination_id', 'contains_id')
+    list_display = ('fare', 'origin_id', 'destination_id', 'contains_id')
 
 
 class FrequencyAdmin(OSMGeoAdmin):

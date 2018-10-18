@@ -20,9 +20,10 @@ list          list available agency/route for exporting
 export        output as gtfs zip
 
 Options:
---output      zip name (default: output.zip)
 --agency      agency_id with comma (,) as separator
---route       route_id with comma (,) as separator
+--output      (DISABLED: use agency_id instead)
+              zip name (default: output.zip)
+--route       (DISABLED) route_id with comma (,) as separator
               NOTE: route will override agency always
 '''
 
@@ -109,7 +110,8 @@ class Command(BaseCommand):
                 for shape in route.export_to_shapes():
                     cf.writerow(shape)
 
-    def gtfs_file(self, dir, queryset, filename, ):
+    def gtfs_file(self, dir, queryset, filename, **kwargs):
+        has_fare = kwargs.get('has_fare', False)
         queryset = queryset.distinct()
         if not queryset:  # just skip if there is nothing at all
             return
@@ -118,57 +120,64 @@ class Command(BaseCommand):
             cf = csv.DictWriter(f, fieldnames=_header)
             cf.writeheader()
             for row in queryset:
-                data = row.gtfs_format()
+                data = row.gtfs_format(has_fare=has_fare)
                 if self.google_spec:
                     for _field in self.google_spec_optional:
                         if _field in data:
                             data[_field] = ''
                 cf.writerow(data)
 
-    def handle_fare(self, agency):
-        # fare_rules = FareRule.objects.filter(route__in=routes)
-        # fare_attrs = FareAttribute.objects.filter(farerule__in=fare_rules)
-        # self.gtfs_file(dir, fare_rules, 'fare_rules.txt')
-        # self.gtfs_file(dir, fare_attrs, 'fare_attributes.txt')
-        fare_attrs = FareAttributes.objects.filter(agency=agency)
-        fare_rules = FareRule.objects.filter(fare__in=fare_attrs)
-        return None
-
-    def export_feed(self, routes, dir):
-        # agency
-        agencies = Agency.objects.filter(route__in=routes)
-        self.gtfs_file(dir, agencies, 'agency.txt')
-
+    def write_gtfs_feed_files(self, agency, _dir):
+        self.gtfs_file(_dir, Agency.objects.filter(pk=agency.pk), 'agency.txt')
+        routes = agency.route_set.all()
         # route
-        self.gtfs_file(dir, routes, 'routes.txt')
+        self.gtfs_file(_dir, routes, 'routes.txt')
         # shapes need special treatments
-        self.shapes_file(dir, routes)
+        self.shapes_file(_dir, routes)
 
         # fare
-        for agency in agencies:
-            self.handle_fare(agency)
+        fare_attrs = FareAttribute.objects.filter(agency=agency)
+        fare_rules = FareRule.objects.filter(fare__in=fare_attrs)
+        has_fare = False
+        if fare_rules.exists():
+            self.gtfs_file(_dir, fare_rules, 'fare_rules.txt')
+            self.gtfs_file(_dir, fare_attrs, 'fare_attributes.txt')
+            has_fare = True
 
         # trip, shapes
         trips = Trip.objects.filter(route__in=routes)
-        self.gtfs_file(dir, trips, 'trips.txt')
+        self.gtfs_file(_dir, trips, 'trips.txt')
 
         # frequency
         freqs = Frequency.objects.filter(trip__in=trips)
-        self.gtfs_file(dir, freqs, 'frequencies.txt')
+        self.gtfs_file(_dir, freqs, 'frequencies.txt')
 
         # stop_times, stop, transfer
         stoptimes = StopTime.objects.filter(trip__in=trips)
         stops = Stop.objects.filter(stoptime__in=stoptimes).distinct()
-        self.gtfs_file(dir, stoptimes, 'stop_times.txt')
-        self.gtfs_file(dir, stops, 'stops.txt')
+        self.gtfs_file(_dir, stoptimes, 'stop_times.txt')
+        self.gtfs_file(_dir, stops, 'stops.txt', has_fare=has_fare)
 
         # Calendar
         srv_ids = [s['service'] for s in trips.values('service').distinct()]
         calendars = Calendar.objects.filter(pk__in=srv_ids)
         cal_exceptions = CalendarDate.objects.filter(service__in=calendars)
-        self.gtfs_file(dir, calendars, 'calendar.txt')
-        self.gtfs_file(dir, cal_exceptions, 'calendar_dates.txt')
+        self.gtfs_file(_dir, calendars, 'calendar.txt')
+        self.gtfs_file(_dir, cal_exceptions, 'calendar_dates.txt')
 
+    def export_feed(self, agencies):
+        for agency in agencies:
+            tmpdir = tempfile.mkdtemp()
+            try:
+                _build = os.path.join(tmpdir, '_build')
+                if not os.path.isdir(_build):
+                    os.mkdir(_build)
+                self.write_gtfs_feed_files(agency, _build)
+                make_archive(agency.agency_id, 'zip', _build)
+                print('Feed: {}.zip'.format(agency.agency_id))
+            finally:
+                rmtree(tmpdir)
+                pass
 
     def handle(self, *args, **options):
         self.google_spec = options['google_spec']
@@ -179,31 +188,14 @@ class Command(BaseCommand):
 
         if 'export' in options['op']:
             agency_ids = options['agency_ids']
-            route_ids = options['route_ids']
-            if route_ids:
-                rts = Route.objects.filter(route_id__in=route_ids.split(','))
-            elif agency_ids:
-                q = { 'agency__agency_id__in': agency_ids.split(',') }
-                rts = Route.objects.filter(**q)
-            else:
+            if not agency_ids:
                 self.help_and_exit('Missing parameters')
-
-            if not rts:
-                self.help_and_exit('Route could not be found')
-
-            tmpdir = tempfile.mkdtemp()
-            try:
-                _build = os.path.join(tmpdir, '_build')
-                print(_build)
-                if not os.path.isdir(_build):
-                    os.mkdir(_build)
-                self.export_feed(rts, _build)
-                print(options['output'])
-                # data = open(make_archive(tmparchive, 'zip', root_dir), 'rb').read()
-                make_archive(options['output'], 'zip', _build)
-            finally:
-                rmtree(tmpdir)
-                pass
+                return
+            agencies = Agency.objects.filter(agency_id__in=agency_ids.split(','))
+            if not agencies:
+                self.help_and_exit('Agency could not be found')
+                return
+            self.export_feed(agencies)
             return
 
         self.help_and_exit()
