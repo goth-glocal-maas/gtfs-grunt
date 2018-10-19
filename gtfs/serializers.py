@@ -230,12 +230,35 @@ class FareRuleSerializer(CompanyModelSerializer):
         exclude = ['company', ]
 
     def validate(self, data):
-        if not (data['destination_id'] or data['contains_id']):
-            _msg = 'Either one of destination_id or contains_id needed'
+        """FareRule can be very varied.
+
+        fare & route                            acceptable
+        fare & origin_id & destination_id       acceptable
+        fare & origin_id & contains_id          acceptable
+
+        fare & origin_id & destination_id & contains_id     UNacceptable
+
+        origin_id requires either destination_id or contains_id and if provided
+        this will override route completely. (route will be there for
+        classification, not in GTFS feed)
+        """
+        route, origin_id = data['route'], data['origin_id']
+        dest_id, contains_id = data['destination_id'], data['contains_id']
+
+        if route and not origin_id:
+            # route is enough, but origin_id will need other stuffs too.
+            return data
+
+        if not origin_id:
+            # origin_id required if no route
+            _msg = 'origin_id required if no route'
             raise ValidationError(_msg)
-        if len(data['destination_id']) and len(data['contains_id']):
-            _msg = 'Either one of destination_id or contains_id is accepted,' \
-                   ' not both'
+
+        if not (dest_id or contains_id):
+            _msg = 'Either destination_id or contains_id needed'
+            raise ValidationError(_msg)
+        if len(dest_id) and len(contains_id):
+            _msg = 'Either destination_id or contains_id is accepted, not both'
             raise ValidationError(_msg)
         return data
 

@@ -60,7 +60,7 @@ class GtfsApiTests(APITestCase):
             company=company,
         )
 
-    def test_create_account(self):
+    def test_create_fare_rule(self):
         """
         Ensure we can create a new account object.
         """
@@ -74,6 +74,53 @@ class GtfsApiTests(APITestCase):
         token = utils.jwt_encode_handler(payload)
         auth = 'Bearer {0}'.format(token)
 
+        url = reverse('farerule-list')
+        # Invalid rule: fare, route, origin_id, NO destination_id/contains_id
+        data = {
+            'fare': serialized_fare50,
+            'route': serialized_route,
+            'origin_id': self.stop_a.stop_id,
+            'destination_id': '',
+            'contains_id': '',
+        }
+        # no authorization
+        resp = self.client.post(url, data, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+        resp = self.client.post(
+            url, data,
+            HTTP_AUTHORIZATION=auth, format='json'
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Invalid rule fare, origin_id but NO destination_id/contains_id
+        data = {
+            'fare': serialized_fare50,
+            'route': None,
+            'origin_id': self.stop_a.stop_id,
+            'destination_id': '',
+            'contains_id': '',
+        }
+        resp = self.client.post(
+            url, data,
+            HTTP_AUTHORIZATION=auth, format='json'
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Good Rule - fare, route
+        data = {
+            'fare': serialized_fare50,
+            'route': serialized_route,
+            'origin_id': self.stop_a.stop_id,
+            'destination_id': '',
+            'contains_id': '',
+        }
+        resp = self.client.post(
+            url, data,
+            HTTP_AUTHORIZATION=auth, format='json'
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+
         data = {
             'fare': serialized_fare50,
             'route': None,
@@ -81,10 +128,6 @@ class GtfsApiTests(APITestCase):
             'destination_id': self.stop_b.stop_id,
             'contains_id': '',
         }
-
-        url = reverse('farerule-list')
-        resp = self.client.post(url, data, format='json')
-        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
         resp = self.client.post(
             url, data,
             HTTP_AUTHORIZATION=auth, format='json'
