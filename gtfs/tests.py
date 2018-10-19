@@ -111,7 +111,7 @@ class GtfsApiTests(APITestCase):
         data = {
             'fare': serialized_fare50,
             'route': serialized_route,
-            'origin_id': self.stop_a.stop_id,
+            'origin_id': '',
             'destination_id': '',
             'contains_id': '',
         }
