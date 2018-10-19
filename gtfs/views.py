@@ -159,6 +159,9 @@ class FareAttributeViewSet(ModelViewSet):
     queryset = FareAttribute.objects.all()
     serializer_class = FareAttributeSerializer
     search_fields = ('fare_id', 'price')
+    custom_get_param = 'agency'
+    custom_fk_field = 'agency'
+    custom_fk_field_rel = 'agency_id'
 
 
 class FareRuleViewSet(ModelViewSet):
