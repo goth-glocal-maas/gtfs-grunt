@@ -667,8 +667,8 @@ class Frequency(CompanyBoundModel):
                     in seconds.
     """
     trip = ForeignKey('Trip')
-    start_time = TimeField('Start time')
-    end_time = TimeField('End time')
+    start_time = CharField('Start time', max_length=9)
+    end_time = CharField('End time', max_length=9)
     headway_secs = IntegerField('Headway seconds', default=1800)
     # optional
     EXACT_TIME_CHOICES = (
