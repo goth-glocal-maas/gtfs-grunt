@@ -1,10 +1,12 @@
 from __future__ import print_function
 from django.core.management.base import BaseCommand, CommandError
+from django.db.models import Q
 from gtfs.models import (
     Agency, Route, FareRule, Frequency, Calendar, CalendarDate,
     StopTime, Stop, FareAttribute, Trip
 )
 from shutil import make_archive, rmtree
+import arrow
 import tempfile
 import sys
 import csv
@@ -128,25 +130,34 @@ class Command(BaseCommand):
                 cf.writerow(data)
 
     def write_gtfs_feed_files(self, agency, _dir):
+        # no trip that outdated
+        today = arrow.get()
+
         self.gtfs_file(_dir, Agency.objects.filter(pk=agency.pk), 'agency.txt')
-        routes = agency.route_set.all()
-        # route
-        self.gtfs_file(_dir, routes, 'routes.txt')
-        # shapes need special treatments
-        self.shapes_file(_dir, routes)
 
         # fare
+        # fare_rules = FareRule.objects.filter(fare__in=fare_attrs)
         fare_attrs = FareAttribute.objects.filter(agency=agency)
-        fare_rules = FareRule.objects.filter(fare__in=fare_attrs)
+        fare_rules = FareRule.objects.filter(fare__in=fare_attrs).filter(Q(route__isnull=False) | ~Q(origin_id='') | ~Q(destination_id='') | ~Q(contains_id=''))
+        # filter only valid fare_attrs again after having valid rules
+        fare_attrs = FareAttribute.objects.filter(farerule__in=fare_rules)
         has_fare = False
         if fare_rules.exists():
             self.gtfs_file(_dir, fare_rules, 'fare_rules.txt')
             self.gtfs_file(_dir, fare_attrs, 'fare_attributes.txt')
             has_fare = True
 
+        routes = agency.route_set.all()
         # trip, shapes
-        trips = Trip.objects.filter(route__in=routes)
+        trips = Trip.objects.filter(route__in=routes,
+                                    service__end_date__gt=today.date())
         self.gtfs_file(_dir, trips, 'trips.txt')
+
+        # route
+        routes = routes.filter(trip__in=trips)
+        self.gtfs_file(_dir, routes, 'routes.txt')
+        # shapes need special treatments
+        self.shapes_file(_dir, routes)
 
         # frequency
         freqs = Frequency.objects.filter(trip__in=trips)

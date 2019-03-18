@@ -5,5 +5,7 @@
     "todo-tree.expanded": true,
     "workbench.colorCustomizations": {
       "titleBar.activeBackground": "#e24a4a"
-    }
+    },
+    "python.linting.pylintEnabled": true,
+    "python.linting.enabled": true
   }
